@@ -26,8 +26,20 @@ interface GeminiGenerateContentResponse {
   }>;
 }
 
+class GeminiRateLimitError extends Error {
+  retryAfterMs: number;
+
+  constructor(message: string, retryAfterMs: number) {
+    super(message);
+    this.name = "GeminiRateLimitError";
+    this.retryAfterMs = retryAfterMs;
+  }
+}
+
 const GEMINI_API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 const PREFERRED_MODEL_NAMES = [
+  "gemini-2.5-flash-lite",
+  "gemini-2.0-flash-lite",
   "gemini-2.5-flash",
   "gemini-2.0-flash",
   "gemini-1.5-flash",
@@ -45,9 +57,32 @@ const parseApiErrorMessage = async (res: Response): Promise<string> => {
   );
 };
 
+const parseRetryAfterMs = (res: Response, message: string): number => {
+  const retryAfterHeader = res.headers.get("retry-after");
+  if (retryAfterHeader) {
+    const retryAfterSeconds = Number(retryAfterHeader);
+    if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
+      return Math.ceil(retryAfterSeconds * 1000);
+    }
+  }
+
+  const match = message.match(/Please retry in ([\d.]+)s/i);
+  if (match) {
+    const retryAfterSeconds = Number(match[1]);
+    if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
+      return Math.ceil(retryAfterSeconds * 1000);
+    }
+  }
+
+  return 30000;
+};
+
 const isModelNotFoundError = (message: string): boolean =>
   message.includes("not found") ||
   message.includes("not supported for generateContent");
+
+const isRateLimitError = (error: unknown): error is GeminiRateLimitError =>
+  error instanceof GeminiRateLimitError;
 
 const fetchAvailableModelName = async (apiKey: string): Promise<string> => {
   const res = await fetch(`${GEMINI_API_BASE_URL}/models`, {
@@ -123,7 +158,11 @@ const requestVerification = async (
   });
 
   if (!res.ok) {
-    throw new Error(await parseApiErrorMessage(res));
+    const message = await parseApiErrorMessage(res);
+    if (res.status === 429) {
+      throw new GeminiRateLimitError(message, parseRetryAfterMs(res, message));
+    }
+    throw new Error(message);
   }
 
   return (await res.json()) as GeminiGenerateContentResponse;
@@ -200,4 +239,5 @@ const verifyWithGemini = async (
 };
 
 export { generatePrompt, verifyWithGemini };
+export { GeminiRateLimitError, isRateLimitError };
 export type { VerificationResult };

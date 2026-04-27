@@ -4,8 +4,12 @@ import {
   Loader2, FileUp, Download, Play, Square, Info, CheckCircle2,
   XCircle, Search, BookOpen, Layers, FileJson, X, Key, Eye, EyeOff,
 } from "lucide-react";
-import { verifyWithGemini, generatePrompt } from "./lib/gemini";
+import { verifyWithGemini, generatePrompt, isRateLimitError } from "./lib/gemini";
 import { WordEntry } from "./types";
+
+const DELAY_BETWEEN_WORDS_MS = 4500;
+const RATE_LIMIT_BUFFER_MS = 1200;
+const MAX_RATE_LIMIT_RETRIES_PER_WORD = 8;
 
 function rowsToCSV(rows: any[]) {
   if (!rows.length) return "";
@@ -17,6 +21,9 @@ function rowsToCSV(rows: any[]) {
     ...rows.map((r) => allKeys.map((k) => escape(r[k])).join(",")),
   ].join("\n");
 }
+
+const wait = (ms: number) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 export default function App() {
   const [results, setResults] = useState<WordEntry[]>([]);
@@ -79,28 +86,49 @@ export default function App() {
       setResults((prev) =>
         prev.map((r, k) => (k === i ? { ...r, _status: "processing" } : r))
       );
-      setStatusMsg(`${i + 1}/${total} — ${resultsRef.current[i]?.word_with_nikkud}`);
-      try {
-        const currentEntry = resultsRef.current[i];
-        const res = await verifyWithGemini(currentEntry, apiKey.trim());
-        setResults((prev) =>
-          prev.map((r, k) =>
-            k === i
-              ? { ...r, _status: "done", ai_verification: { ...r.ai_verification, ...res } }
-              : r
-          )
-        );
-      } catch (err: any) {
-        console.error(`Error processing word ${i}:`, err);
-        setStatusMsg(`❌ ${err.message}`);
-        setResults((prev) =>
-          prev.map((r, k) => (k === i ? { ...r, _status: "error" } : r))
-        );
+      let currentWordDone = false;
+      let rateLimitRetries = 0;
+
+      while (!currentWordDone && !abortRef.current) {
+        setStatusMsg(`${i + 1}/${total} — ${resultsRef.current[i]?.word_with_nikkud}`);
+        try {
+          const currentEntry = resultsRef.current[i];
+          const res = await verifyWithGemini(currentEntry, apiKey.trim());
+          setResults((prev) =>
+            prev.map((r, k) =>
+              k === i
+                ? { ...r, _status: "done", ai_verification: { ...r.ai_verification, ...res } }
+                : r
+            )
+          );
+          currentWordDone = true;
+        } catch (err: any) {
+          if (
+            isRateLimitError(err) &&
+            rateLimitRetries < MAX_RATE_LIMIT_RETRIES_PER_WORD
+          ) {
+            rateLimitRetries += 1;
+            const waitMs = err.retryAfterMs + RATE_LIMIT_BUFFER_MS;
+            setStatusMsg(
+              `Quota Gemini atteinte. Pause ${Math.ceil(waitMs / 1000)}s avant reprise (${i + 1}/${total}).`
+            );
+            await wait(waitMs);
+            continue;
+          }
+
+          console.error(`Error processing word ${i}:`, err);
+          setStatusMsg(`❌ ${err.message}`);
+          setResults((prev) =>
+            prev.map((r, k) => (k === i ? { ...r, _status: "error" } : r))
+          );
+          currentWordDone = true;
+        }
       }
+
       setProgress(Math.round(((i + 1) / total) * 100));
-      // Small delay to avoid rate limiting
+
       if (i < total - 1 && !abortRef.current) {
-        await new Promise((r) => setTimeout(r, 400));
+        await wait(DELAY_BETWEEN_WORDS_MS);
       }
     }
     setProcessing(false);
