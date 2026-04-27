@@ -1,75 +1,86 @@
-import { GoogleGenAI, Type } from "@google/genai";
 import { WordEntry } from "../types";
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 export interface VerificationResult {
   nikkud_correct: boolean;
   pages_same_meaning: string[];
   corrected_nikkud_word: string | null;
   notes: string;
-  generated_prompt?: string;
 }
 
 export function generatePrompt(entry: WordEntry): string {
-  return `You are a world-class expert in Aramaic of the Babylonian Talmud (Gemara).
-  
-Task: Verify if the NIKKUD (vowel marks) on the student's Aramaic word matches the intended meaning, using the provided dictionary and Gemara context.
+  const dict = entry.dictionary || {};
+  const ctx = (entry.gemara_pages || [])
+    .flatMap((page) =>
+      (page.occurrences || []).map((occ, i) => {
+        const b = (occ.gemara?.before || []).slice(-4).join(" ");
+        const a = (occ.gemara?.after || []).slice(0, 4).join(" ");
+        const w = occ.gemara?.word || "";
+        const s = occ.steinsaltz?.full_context
+          ? ` [Steinsaltz: ${(occ.steinsaltz.full_context || "").slice(0, 80)}]`
+          : "";
+        return `  • ${page.label} occ.${i + 1}: ${b} 【${w}】 ${a}${s}`;
+      })
+    )
+    .join("\n");
 
-STUDENT INPUT:
-- Word (with nikkud): "${entry.word_with_nikkud}"
-- Intended French Meaning: "${entry.french_meaning}"
+  return `Tu es un expert mondial en araméen du Talmud babylonien (Guemara).
 
-DICTIONARY DATA:
-- Search word: ${entry.dictionary.query_used}
-- Suggestions: ${entry.dictionary.suggestions.join(", ")}
-- Meanings: ${entry.dictionary.meaning}
+Vérifie le nikkud de ce mot araméen :
+  Mot étudiant : "${entry.word_with_nikkud}"
+  Sens visé (fr) : "${entry.french_meaning}"
+  Dictionnaire : ${dict.meaning || "N/A"}
+  Suggestions : ${(dict.suggestions || []).slice(0, 4).join(", ")}
 
-GEMARA CONTEXT WINDOWS:
-${entry.gemara_pages.map(page => `
-Page ${page.label}:
-${page.occurrences.map((occ, i) => `
-  Occurrence ${i + 1}:
-  - Gemara Text (with nikkud): "${occ.gemara.full_context}"
-  - Steinsaltz Explanation (Hebrew): "${occ.steinsaltz?.full_context || "N/A"}"
-  - Word is bold in Steinsaltz: ${occ.steinsaltz?.word_is_bold ? "Yes" : "No"}
-`).join("")}`).join("")}
+Contextes Guemara :
+${ctx || "  (aucun contexte disponible)"}
 
-INSTRUCTIONS:
-1. "nikkud_correct": boolean. Is the nikkud on student's word "${entry.word_with_nikkud}" correct for the meaning "${entry.french_meaning}"?
-2. "pages_same_meaning": Array of labels (e.g. ["ברכות ה ע\"ב"]) where meaning matches.
-3. "corrected_nikkud_word": If wrong, provide the word with FIXED nikkud marks. If correct, return "-".
-4. "notes": A brief scholarly explanation.
-
-Return JSON.`;
+Réponds UNIQUEMENT avec cet objet JSON (sans backticks ni texte autour) :
+{"nikkud_correct":boolean,"corrected_nikkud_word":"mot corrigé ou -","notes":"explication grammaticale courte en français","pages_same_meaning":["label1","..."]}`;
 }
 
-export async function verifyWithGemini(entry: WordEntry): Promise<VerificationResult> {
+// Uses direct REST call instead of the SDK to avoid the 404 model-not-found error.
+// The SDK sometimes resolves the wrong endpoint depending on the version.
+export async function verifyWithGemini(
+  entry: WordEntry,
+  apiKey: string
+): Promise<VerificationResult> {
   const prompt = generatePrompt(entry);
 
-  const result = await ai.models.generateContent({
-    model: "gemini-1.5-flash",
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          nikkud_correct: { type: Type.BOOLEAN },
-          pages_same_meaning: { type: Type.ARRAY, items: { type: Type.STRING } },
-          corrected_nikkud_word: { type: Type.STRING },
-          notes: { type: Type.STRING }
-        },
-        required: ["nikkud_correct", "pages_same_meaning", "corrected_nikkud_word", "notes"]
-      }
-    }
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseMimeType: "application/json",
+        temperature: 0.1,
+      },
+    }),
   });
 
-  const parsed = JSON.parse(result.text || '{}');
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(
+      (err as any)?.error?.message || `Gemini API error: HTTP ${res.status}`
+    );
+  }
+
+  const data = await res.json();
+  const txt: string =
+    data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+  const clean = txt.replace(/```json|```/g, "").trim();
+  const p = JSON.parse(clean);
+
   return {
-    nikkud_correct: parsed.nikkud_correct,
-    pages_same_meaning: parsed.pages_same_meaning,
-    corrected_nikkud_word: parsed.corrected_nikkud_word === "-" ? null : parsed.corrected_nikkud_word,
-    notes: parsed.notes
+    nikkud_correct: p.nikkud_correct ?? null,
+    corrected_nikkud_word:
+      p.corrected_nikkud_word && p.corrected_nikkud_word !== "-"
+        ? p.corrected_nikkud_word
+        : null,
+    notes: p.notes || "",
+    pages_same_meaning: Array.isArray(p.pages_same_meaning)
+      ? p.pages_same_meaning
+      : [],
   };
 }
