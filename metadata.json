@@ -1,0 +1,6 @@
+{
+  "name": "Aramaic Nikkud Verifier",
+  "description": "A scholarly tool to verify the vocalization (nikkud) of Gemara Aramaic words by cross-referencing with daf-yomi.com and analyzing context with Gemini AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
