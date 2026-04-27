@@ -10,8 +10,14 @@ import { WordEntry } from "./types";
 const DELAY_BETWEEN_WORDS_MS = 4500;
 const RATE_LIMIT_BUFFER_MS = 1200;
 const MAX_RATE_LIMIT_RETRIES_PER_WORD = 8;
+const EMPTY_AI_VERIFICATION = {
+  nikkud_correct: null,
+  corrected_nikkud_word: null,
+  notes: "",
+  pages_same_meaning: [],
+};
 
-function rowsToCSV(rows: any[]) {
+const rowsToCSV = (rows: any[]) => {
   if (!rows.length) return "";
   const allKeys = Object.keys(rows[0]);
   const escape = (v: any) =>
@@ -20,12 +26,29 @@ function rowsToCSV(rows: any[]) {
     allKeys.join(","),
     ...rows.map((r) => allKeys.map((k) => escape(r[k])).join(",")),
   ].join("\n");
-}
+};
 
 const wait = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
-export default function App() {
+const getImportedStatus = (entry: WordEntry): WordEntry["_status"] => {
+  const verification = entry.ai_verification;
+  if (!verification) {
+    return "pending";
+  }
+
+  const hasVerdict = verification.nikkud_correct !== null;
+  const hasCorrection = Boolean(verification.corrected_nikkud_word);
+  const hasNotes = Boolean(verification.notes?.trim());
+  const hasPages = (verification.pages_same_meaning || []).length > 0;
+
+  return hasVerdict || hasCorrection || hasNotes || hasPages ? "done" : "pending";
+};
+
+const isEntryAlreadyAnalyzed = (entry: WordEntry): boolean =>
+  getImportedStatus(entry) === "done";
+
+const App = () => {
   const [results, setResults] = useState<WordEntry[]>([]);
   const [apiKey, setApiKey] = useState("");
   const [showKey, setShowKey] = useState(false);
@@ -51,13 +74,8 @@ export default function App() {
         setResults(
           list.map((entry) => ({
             ...entry,
-            ai_verification: entry.ai_verification || {
-              nikkud_correct: null,
-              corrected_nikkud_word: null,
-              notes: "",
-              pages_same_meaning: [],
-            },
-            _status: "pending",
+            ai_verification: entry.ai_verification || EMPTY_AI_VERIFICATION,
+            _status: getImportedStatus(entry),
           }))
         );
         setStatusMsg(`${list.length} mot${list.length > 1 ? "s" : ""} chargé${list.length > 1 ? "s" : ""}.`);
@@ -76,13 +94,28 @@ export default function App() {
       setStatusMsg("⚠️ Entrez votre clé API Gemini d'abord.");
       return;
     }
+
+    const entriesToProcess = resultsRef.current.filter(
+      (entry) => !isEntryAlreadyAnalyzed(entry)
+    );
+
+    if (entriesToProcess.length === 0) {
+      setProgress(100);
+      setStatusMsg("✓ Tous les mots de ce fichier ont déjà une analyse IA.");
+      return;
+    }
+
     setProcessing(true);
     abortRef.current = false;
-    setProgress(0);
-    const total = results.length;
+    const total = entriesToProcess.length;
+    let processedCount = 0;
 
-    for (let i = 0; i < total; i++) {
+    for (let i = 0; i < resultsRef.current.length; i++) {
       if (abortRef.current) break;
+      if (isEntryAlreadyAnalyzed(resultsRef.current[i])) {
+        continue;
+      }
+
       setResults((prev) =>
         prev.map((r, k) => (k === i ? { ...r, _status: "processing" } : r))
       );
@@ -90,7 +123,9 @@ export default function App() {
       let rateLimitRetries = 0;
 
       while (!currentWordDone && !abortRef.current) {
-        setStatusMsg(`${i + 1}/${total} — ${resultsRef.current[i]?.word_with_nikkud}`);
+        setStatusMsg(
+          `${processedCount + 1}/${total} — ${resultsRef.current[i]?.word_with_nikkud}`
+        );
         try {
           const currentEntry = resultsRef.current[i];
           const res = await verifyWithGemini(currentEntry, apiKey.trim());
@@ -110,7 +145,7 @@ export default function App() {
             rateLimitRetries += 1;
             const waitMs = err.retryAfterMs + RATE_LIMIT_BUFFER_MS;
             setStatusMsg(
-              `Quota Gemini atteinte. Pause ${Math.ceil(waitMs / 1000)}s avant reprise (${i + 1}/${total}).`
+              `Quota Gemini atteinte. Pause ${Math.ceil(waitMs / 1000)}s avant reprise (${processedCount + 1}/${total}).`
             );
             await wait(waitMs);
             continue;
@@ -125,9 +160,10 @@ export default function App() {
         }
       }
 
-      setProgress(Math.round(((i + 1) / total) * 100));
+      processedCount += 1;
+      setProgress(Math.round((processedCount / total) * 100));
 
-      if (i < total - 1 && !abortRef.current) {
+      if (processedCount < total && !abortRef.current) {
         await wait(DELAY_BETWEEN_WORDS_MS);
       }
     }
@@ -692,4 +728,6 @@ export default function App() {
       </AnimatePresence>
     </div>
   );
-}
+};
+
+export default App;
