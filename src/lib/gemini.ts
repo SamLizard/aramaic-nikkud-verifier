@@ -1,14 +1,136 @@
 import { WordEntry } from "../types";
 
-export interface VerificationResult {
-  nikkud_correct: boolean;
+interface VerificationResult {
+  nikkud_correct: boolean | null;
   pages_same_meaning: string[];
   corrected_nikkud_word: string | null;
   notes: string;
 }
 
-export function generatePrompt(entry: WordEntry): string {
-  const dict = entry.dictionary || {};
+interface GeminiModel {
+  name?: string;
+  supportedGenerationMethods?: string[];
+}
+
+interface GeminiListModelsResponse {
+  models?: GeminiModel[];
+}
+
+interface GeminiGenerateContentResponse {
+  candidates?: Array<{
+    content?: {
+      parts?: Array<{
+        text?: string;
+      }>;
+    };
+  }>;
+}
+
+const GEMINI_API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
+const PREFERRED_MODEL_NAMES = [
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
+  "gemini-1.5-flash",
+];
+const modelNameCache = new Map<string, Promise<string>>();
+
+const normalizeModelName = (modelName: string): string =>
+  modelName.startsWith("models/") ? modelName : `models/${modelName}`;
+
+const parseApiErrorMessage = async (res: Response): Promise<string> => {
+  const err = await res.json().catch(() => ({}));
+  return (
+    (err as { error?: { message?: string } })?.error?.message ||
+    `Gemini API error: HTTP ${res.status}`
+  );
+};
+
+const isModelNotFoundError = (message: string): boolean =>
+  message.includes("not found") ||
+  message.includes("not supported for generateContent");
+
+const fetchAvailableModelName = async (apiKey: string): Promise<string> => {
+  const res = await fetch(`${GEMINI_API_BASE_URL}/models`, {
+    headers: {
+      "x-goog-api-key": apiKey,
+    },
+  });
+
+  if (!res.ok) {
+    return normalizeModelName(PREFERRED_MODEL_NAMES[0]);
+  }
+
+  const data = (await res.json()) as GeminiListModelsResponse;
+  const models = (data.models || []).filter((model) =>
+    (model.supportedGenerationMethods || []).includes("generateContent")
+  );
+
+  const preferredModel = PREFERRED_MODEL_NAMES.map(normalizeModelName).find(
+    (preferredName) =>
+      models.some((model) => normalizeModelName(model.name || "") === preferredName)
+  );
+
+  if (preferredModel) {
+    return preferredModel;
+  }
+
+  const flashModel = models.find((model) =>
+    normalizeModelName(model.name || "").includes("flash")
+  )?.name;
+
+  if (flashModel) {
+    return normalizeModelName(flashModel);
+  }
+
+  return normalizeModelName(models[0]?.name || PREFERRED_MODEL_NAMES[0]);
+};
+
+const getModelName = async (
+  apiKey: string,
+  options?: { forceRefresh?: boolean }
+): Promise<string> => {
+  if (options?.forceRefresh) {
+    modelNameCache.delete(apiKey);
+  }
+
+  const cachedModel = modelNameCache.get(apiKey);
+  if (cachedModel) {
+    return cachedModel;
+  }
+
+  const modelPromise = fetchAvailableModelName(apiKey);
+  modelNameCache.set(apiKey, modelPromise);
+
+  return modelPromise;
+};
+
+const requestVerification = async (
+  prompt: string,
+  apiKey: string,
+  modelName: string
+): Promise<GeminiGenerateContentResponse> => {
+  const url = `${GEMINI_API_BASE_URL}/${normalizeModelName(modelName)}:generateContent?key=${apiKey}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseMimeType: "application/json",
+        temperature: 0.1,
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseApiErrorMessage(res));
+  }
+
+  return (await res.json()) as GeminiGenerateContentResponse;
+};
+
+const generatePrompt = (entry: WordEntry): string => {
+  const dict = entry.dictionary;
   const ctx = (entry.gemara_pages || [])
     .flatMap((page) =>
       (page.occurrences || []).map((occ, i) => {
@@ -28,49 +150,41 @@ export function generatePrompt(entry: WordEntry): string {
 Vérifie le nikkud de ce mot araméen :
   Mot étudiant : "${entry.word_with_nikkud}"
   Sens visé (fr) : "${entry.french_meaning}"
-  Dictionnaire : ${dict.meaning || "N/A"}
-  Suggestions : ${(dict.suggestions || []).slice(0, 4).join(", ")}
+  Dictionnaire : ${dict?.meaning || "N/A"}
+  Suggestions : ${(dict?.suggestions || []).slice(0, 4).join(", ")}
 
 Contextes Guemara :
 ${ctx || "  (aucun contexte disponible)"}
 
 Réponds UNIQUEMENT avec cet objet JSON (sans backticks ni texte autour) :
 {"nikkud_correct":boolean,"corrected_nikkud_word":"mot corrigé ou -","notes":"explication grammaticale courte en français","pages_same_meaning":["label1","..."]}`;
-}
+};
 
-// Uses direct REST call instead of the SDK to avoid the 404 model-not-found error.
+// DONE: Uses direct REST call instead of the SDK to avoid the 404 model-not-found error.
 // The SDK sometimes resolves the wrong endpoint depending on the version.
-export async function verifyWithGemini(
+const verifyWithGemini = async (
   entry: WordEntry,
   apiKey: string
-): Promise<VerificationResult> {
+): Promise<VerificationResult> => {
   const prompt = generatePrompt(entry);
+  let modelName = await getModelName(apiKey);
+  let data: GeminiGenerateContentResponse;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        responseMimeType: "application/json",
-        temperature: 0.1,
-      },
-    }),
-  });
+  try {
+    data = await requestVerification(prompt, apiKey, modelName);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!isModelNotFoundError(message)) {
+      throw error;
+    }
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(
-      (err as any)?.error?.message || `Gemini API error: HTTP ${res.status}`
-    );
+    modelName = await getModelName(apiKey, { forceRefresh: true });
+    data = await requestVerification(prompt, apiKey, modelName);
   }
 
-  const data = await res.json();
-  const txt: string =
-    data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+  const txt: string = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
   const clean = txt.replace(/```json|```/g, "").trim();
-  const p = JSON.parse(clean);
+  const p = JSON.parse(clean) as Partial<VerificationResult>;
 
   return {
     nikkud_correct: p.nikkud_correct ?? null,
@@ -83,4 +197,7 @@ export async function verifyWithGemini(
       ? p.pages_same_meaning
       : [],
   };
-}
+};
+
+export { generatePrompt, verifyWithGemini };
+export type { VerificationResult };
