@@ -1,6 +1,6 @@
-import { WordEntry } from "../types";
+import { AIVerification, WordEntry } from "../types";
 
-interface VerificationResult {
+interface VerificationResult extends AIVerification {
   nikkud_correct: boolean | null;
   pages_same_meaning: string[];
   corrected_nikkud_word: string | null;
@@ -15,18 +15,63 @@ interface GroqChatCompletionResponse {
   }>;
 }
 
-class GroqRateLimitError extends Error {
+interface InvalidJsonFailure {
+  message: string;
+  model: string;
+  rawResponse: string;
+}
+
+interface ErrorVerificationDetails {
+  failed_raw_ai_response: string;
+  failed_raw_ai_model: string | null;
+  failed_raw_ai_error: string;
+  last_error: string;
+}
+
+class GroqRequestError extends Error {
+  status: number;
   retryAfterMs: number;
 
-  constructor(message: string, retryAfterMs: number) {
+  constructor(message: string, status: number, retryAfterMs: number = 30000) {
     super(message);
-    this.name = "GroqRateLimitError";
+    this.name = "GroqRequestError";
+    this.status = status;
     this.retryAfterMs = retryAfterMs;
   }
 }
 
+class GroqRateLimitError extends GroqRequestError {
+  constructor(message: string, retryAfterMs: number) {
+    super(message, 429, retryAfterMs);
+    this.name = "GroqRateLimitError";
+  }
+}
+
+class GroqInvalidJsonError extends Error {
+  model: string;
+  rawResponse: string;
+
+  constructor(message: string, model: string, rawResponse: string) {
+    super(message);
+    this.name = "GroqInvalidJsonError";
+    this.model = model;
+    this.rawResponse = rawResponse;
+  }
+}
+
+class GroqAllKeysFailedError extends Error {
+  details: ErrorVerificationDetails;
+
+  constructor(message: string, details: ErrorVerificationDetails) {
+    super(message);
+    this.name = "GroqAllKeysFailedError";
+    this.details = details;
+  }
+}
+
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_MODEL = "openai/gpt-oss-120b";
+const PRIMARY_MODEL = "openai/gpt-oss-120b";
+const JSON_FALLBACK_MODEL = "qwen/qwen3-32b";
 const HEBREW_DIACRITICS_REGEX = /[\u0591-\u05BD\u05BF-\u05C7]/g;
 
 const parseApiErrorMessage = async (res: Response): Promise<string> => {
@@ -57,6 +102,9 @@ const parseRetryAfterMs = (res: Response, message: string): number => {
   return 30000;
 };
 
+const isRecoverableStatus = (status: number): boolean =>
+  [400, 401, 403, 408, 409, 422, 429].includes(status) || status >= 500;
+
 const isRateLimitError = (error: unknown): error is GroqRateLimitError =>
   error instanceof GroqRateLimitError;
 
@@ -82,64 +130,86 @@ const buildNotes = (notes: string, extraNote?: string): string => {
   return `${notes} ${extraNote}`;
 };
 
+const createFailureDetails = (
+  message: string,
+  invalidJsonFailure?: InvalidJsonFailure
+): ErrorVerificationDetails => ({
+  failed_raw_ai_response: invalidJsonFailure?.rawResponse || "",
+  failed_raw_ai_model: invalidJsonFailure?.model || null,
+  failed_raw_ai_error: invalidJsonFailure?.message || "",
+  last_error: message,
+});
+
 const requestVerification = async (
   prompt: string,
-  apiKey: string
+  apiKey: string,
+  model: string,
+  responseFormat: "json_schema" | "json_object"
 ): Promise<GroqChatCompletionResponse> => {
+  const body: Record<string, unknown> = {
+    model,
+    messages: [
+      {
+        role: "user",
+        content: prompt,
+      },
+    ],
+    temperature: responseFormat === "json_schema" ? 0.2 : 0.1,
+    max_completion_tokens: 1400,
+    top_p: 1,
+    stream: false,
+    response_format:
+      responseFormat === "json_schema"
+        ? {
+            type: "json_schema",
+            json_schema: {
+              name: "nikkud_verification",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  nikkud_correct: {
+                    type: "boolean",
+                  },
+                  corrected_nikkud_word: {
+                    type: "string",
+                  },
+                  notes: {
+                    type: "string",
+                  },
+                  pages_same_meaning: {
+                    type: "array",
+                    items: {
+                      type: "string",
+                    },
+                  },
+                },
+                required: [
+                  "nikkud_correct",
+                  "corrected_nikkud_word",
+                  "notes",
+                  "pages_same_meaning",
+                ],
+                additionalProperties: false,
+              },
+            },
+          }
+        : {
+            type: "json_object",
+          },
+  };
+
+  if (model === PRIMARY_MODEL) {
+    body.reasoning_effort = "medium";
+  }
+
   const res = await fetch(GROQ_API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model: GROQ_MODEL,
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      temperature: 0.2,
-      max_completion_tokens: 1200,
-      top_p: 1,
-      reasoning_effort: "medium",
-      stream: false,
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "nikkud_verification",
-          strict: true,
-          schema: {
-            type: "object",
-            properties: {
-              nikkud_correct: {
-                type: "boolean",
-              },
-              corrected_nikkud_word: {
-                type: "string",
-              },
-              notes: {
-                type: "string",
-              },
-              pages_same_meaning: {
-                type: "array",
-                items: {
-                  type: "string",
-                },
-              },
-            },
-            required: [
-              "nikkud_correct",
-              "corrected_nikkud_word",
-              "notes",
-              "pages_same_meaning",
-            ],
-            additionalProperties: false,
-          },
-        },
-      },
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
@@ -147,7 +217,8 @@ const requestVerification = async (
     if (res.status === 429) {
       throw new GroqRateLimitError(message, parseRetryAfterMs(res, message));
     }
-    throw new Error(message);
+
+    throw new GroqRequestError(message, res.status, parseRetryAfterMs(res, message));
   }
 
   return (await res.json()) as GroqChatCompletionResponse;
@@ -204,19 +275,36 @@ Réponds UNIQUEMENT avec cet objet JSON (sans backticks ni texte autour) :
 {"nikkud_correct":boolean,"corrected_nikkud_word":"mot corrigé ou -","notes":"explication grammaticale courte en français","pages_same_meaning":["label1","..."]}`;
 };
 
-const verifyWithGroq = async (
+const generateFallbackPrompt = (entry: WordEntry): string =>
+  `${generatePrompt(entry)}
+
+IMPORTANT SUPPLÉMENTAIRE :
+- Réponds avec du JSON valide uniquement.
+- Aucune phrase avant ou après le JSON.
+- Si tu n'es pas sûr, renvoie quand même l'objet JSON demandé.`;
+
+const parseVerificationResponse = (
   entry: WordEntry,
-  apiKey: string
-): Promise<VerificationResult> => {
-  const prompt = generatePrompt(entry);
-  const data = await requestVerification(prompt, apiKey);
-  const rawContent = data.choices?.[0]?.message?.content;
-  const txt = typeof rawContent === "string" ? rawContent : "{}";
-  const clean = txt.replace(/```json|```/g, "").trim();
-  const p = JSON.parse(clean) as Partial<VerificationResult>;
+  rawContent: string,
+  model: string,
+  priorInvalidJsonFailure?: InvalidJsonFailure
+): VerificationResult => {
+  const clean = rawContent.replace(/```json|```/g, "").trim();
+  let parsed: Partial<VerificationResult>;
+
+  try {
+    parsed = JSON.parse(clean) as Partial<VerificationResult>;
+  } catch (error) {
+    throw new GroqInvalidJsonError(
+      `Le modèle ${model} n'a pas renvoyé un JSON valide.`,
+      model,
+      rawContent
+    );
+  }
+
   const rawCorrectedWord =
-    p.corrected_nikkud_word && p.corrected_nikkud_word !== "-"
-      ? p.corrected_nikkud_word.trim()
+    parsed.corrected_nikkud_word && parsed.corrected_nikkud_word !== "-"
+      ? parsed.corrected_nikkud_word.trim()
       : null;
   const correctedWord =
     rawCorrectedWord &&
@@ -229,15 +317,158 @@ const verifyWithGroq = async (
       : "";
 
   return {
-    nikkud_correct: p.nikkud_correct ?? null,
+    nikkud_correct: parsed.nikkud_correct ?? null,
     corrected_nikkud_word: correctedWord,
-    notes: buildNotes(p.notes || "", correctionRejected),
-    pages_same_meaning: Array.isArray(p.pages_same_meaning)
-      ? p.pages_same_meaning
+    notes: buildNotes(parsed.notes || "", correctionRejected),
+    pages_same_meaning: Array.isArray(parsed.pages_same_meaning)
+      ? parsed.pages_same_meaning
       : [],
+    model_used: model,
+    failed_raw_ai_response: priorInvalidJsonFailure?.rawResponse || "",
+    failed_raw_ai_model: priorInvalidJsonFailure?.model || null,
+    failed_raw_ai_error: priorInvalidJsonFailure?.message || "",
+    last_error: "",
   };
 };
 
-export { generatePrompt, verifyWithGroq };
+const tryModel = async (
+  entry: WordEntry,
+  apiKey: string,
+  model: string,
+  responseFormat: "json_schema" | "json_object",
+  priorInvalidJsonFailure?: InvalidJsonFailure
+): Promise<VerificationResult> => {
+  const prompt =
+    model === JSON_FALLBACK_MODEL ? generateFallbackPrompt(entry) : generatePrompt(entry);
+  const data = await requestVerification(prompt, apiKey, model, responseFormat);
+  const rawContent = data.choices?.[0]?.message?.content;
+  const txt = typeof rawContent === "string" ? rawContent : "";
+
+  if (!txt.trim()) {
+    throw new GroqInvalidJsonError(
+      `Le modèle ${model} n'a pas renvoyé de contenu exploitable.`,
+      model,
+      txt
+    );
+  }
+
+  return parseVerificationResponse(entry, txt, model, priorInvalidJsonFailure);
+};
+
+const verifyWithGroq = async (
+  entry: WordEntry,
+  apiKeys: string[]
+): Promise<VerificationResult> => {
+  let lastRecoverableError: GroqRequestError | null = null;
+  let latestInvalidJsonFailure: InvalidJsonFailure | undefined;
+
+  for (const apiKey of apiKeys) {
+    try {
+      return await tryModel(entry, apiKey, PRIMARY_MODEL, "json_schema");
+    } catch (error) {
+      if (error instanceof GroqInvalidJsonError) {
+        latestInvalidJsonFailure = {
+          message: error.message,
+          model: error.model,
+          rawResponse: error.rawResponse,
+        };
+
+        try {
+          return await tryModel(
+            entry,
+            apiKey,
+            JSON_FALLBACK_MODEL,
+            "json_object",
+            latestInvalidJsonFailure
+          );
+        } catch (fallbackError) {
+          if (fallbackError instanceof GroqInvalidJsonError) {
+            latestInvalidJsonFailure = {
+              message: fallbackError.message,
+              model: fallbackError.model,
+              rawResponse: fallbackError.rawResponse,
+            };
+            continue;
+          }
+
+          if (
+            fallbackError instanceof GroqRequestError &&
+            isRecoverableStatus(fallbackError.status)
+          ) {
+            lastRecoverableError = fallbackError;
+            continue;
+          }
+
+          throw fallbackError;
+        }
+      }
+
+      if (error instanceof GroqRequestError && isRecoverableStatus(error.status)) {
+        lastRecoverableError = error;
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  if (latestInvalidJsonFailure) {
+    throw new GroqAllKeysFailedError(
+      "Aucune clé n'a permis d'obtenir un JSON valide.",
+      createFailureDetails(
+        "Aucune clé n'a permis d'obtenir un JSON valide.",
+        latestInvalidJsonFailure
+      )
+    );
+  }
+
+  if (lastRecoverableError instanceof GroqRateLimitError) {
+    throw new GroqRateLimitError(
+      lastRecoverableError.message,
+      lastRecoverableError.retryAfterMs
+    );
+  }
+
+  if (lastRecoverableError) {
+    throw new GroqAllKeysFailedError(
+      lastRecoverableError.message,
+      createFailureDetails(lastRecoverableError.message)
+    );
+  }
+
+  throw new GroqAllKeysFailedError(
+    "Toutes les clés ont échoué sans réponse exploitable.",
+    createFailureDetails("Toutes les clés ont échoué sans réponse exploitable.")
+  );
+};
+
+const extractVerificationErrorDetails = (
+  error: unknown
+): Partial<ErrorVerificationDetails> => {
+  if (error instanceof GroqAllKeysFailedError) {
+    return error.details;
+  }
+
+  if (error instanceof GroqInvalidJsonError) {
+    return createFailureDetails(error.message, {
+      message: error.message,
+      model: error.model,
+      rawResponse: error.rawResponse,
+    });
+  }
+
+  if (error instanceof Error) {
+    return {
+      failed_raw_ai_response: "",
+      failed_raw_ai_model: null,
+      failed_raw_ai_error: "",
+      last_error: error.message,
+    };
+  }
+
+  return {};
+};
+
+export { extractVerificationErrorDetails, generatePrompt, verifyWithGroq };
 export { GroqRateLimitError, isRateLimitError };
 export type { VerificationResult };

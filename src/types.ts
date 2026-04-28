@@ -36,6 +36,11 @@ export interface AIVerification {
   pages_same_meaning: string[];
   corrected_nikkud_word: string | null;
   notes: string;
+  model_used?: string | null;
+  failed_raw_ai_response?: string;
+  failed_raw_ai_model?: string | null;
+  failed_raw_ai_error?: string;
+  last_error?: string;
 }
 
 export interface WordEntry {
