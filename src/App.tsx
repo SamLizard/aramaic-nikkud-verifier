@@ -198,6 +198,35 @@ const getEffectiveModelUsed = (verification: AIVerification): string | null => {
   return successTrial?.model || verification.failed_raw_ai_model || null;
 };
 
+const normalizeDisplayedHebrew = (text: string): string =>
+  (text || "").normalize("NFC").trim();
+
+const extractDictionaryNikkudWord = (entry: WordEntry): string | null => {
+  const meaning = entry.dictionary?.meaning || "";
+  if (!meaning) {
+    return null;
+  }
+
+  const head = meaning.split(" - ")[0].trim();
+  if (!head) {
+    return null;
+  }
+
+  const match = head.match(/^[\u0590-\u05FF"'׳״־…\s]+$/);
+  if (!match) {
+    return null;
+  }
+
+  if (!HEBREW_MARK_REGEX.test(head)) {
+    return null;
+  }
+
+  return normalizeDisplayedHebrew(head);
+};
+
+const hasSameDisplayedNikkud = (left: string, right: string): boolean =>
+  normalizeDisplayedHebrew(left) === normalizeDisplayedHebrew(right);
+
 const getStatusRank = (status?: WordEntry["_status"]): number => {
   switch (status) {
     case "done":
@@ -246,6 +275,31 @@ const getTrialTone = (trial: AIVerificationTrial): string => {
 
   return "text-red-700 border-red-200 bg-red-50";
 };
+
+interface DisplayOccurrence {
+  pageLabel: string;
+  urlNikud: string;
+  urlExplain: string;
+  occurrenceIndex: number;
+  gemaraWord: string;
+  before: string[];
+  after: string[];
+  steinsaltzContext: string;
+}
+
+const flattenOccurrences = (entry: WordEntry): DisplayOccurrence[] =>
+  entry.gemara_pages.flatMap((page) =>
+    page.occurrences.map((occurrence, occurrenceIndex) => ({
+      pageLabel: page.label,
+      urlNikud: page.url_nikud,
+      urlExplain: page.url_explain,
+      occurrenceIndex,
+      gemaraWord: occurrence.gemara.word,
+      before: occurrence.gemara.before,
+      after: occurrence.gemara.after,
+      steinsaltzContext: occurrence.steinsaltz?.full_context || "",
+    }))
+  );
 
 const App = () => {
   const [results, setResults] = useState<WordEntry[]>([]);
@@ -550,6 +604,49 @@ const App = () => {
   const selectedModelUsed = selectedWord
     ? getEffectiveModelUsed(selectedWord.ai_verification)
     : null;
+  const selectedDictionaryNikkudWord = selectedWord
+    ? extractDictionaryNikkudWord(selectedWord)
+    : null;
+  const selectedOccurrences = selectedWord ? flattenOccurrences(selectedWord) : [];
+  const shouldGroupOccurrences =
+    Boolean(
+      selectedWord &&
+      selectedWord.ai_verification.nikkud_correct === false &&
+      selectedWord.ai_verification.corrected_nikkud_word
+    );
+  const selectedOccurrenceGroups = shouldGroupOccurrences && selectedWord
+    ? [
+        {
+          key: "mine",
+          title: "Comme mon nikkud",
+          occurrences: selectedOccurrences.filter((occurrence) =>
+            hasSameDisplayedNikkud(occurrence.gemaraWord, selectedWord.word_with_nikkud)
+          ),
+        },
+        {
+          key: "ai",
+          title: "Comme la correction IA",
+          occurrences: selectedOccurrences.filter((occurrence) =>
+            hasSameDisplayedNikkud(
+              occurrence.gemaraWord,
+              selectedWord.ai_verification.corrected_nikkud_word || ""
+            )
+          ),
+        },
+        {
+          key: "other",
+          title: "Autres nikkudim",
+          occurrences: selectedOccurrences.filter(
+            (occurrence) =>
+              !hasSameDisplayedNikkud(occurrence.gemaraWord, selectedWord.word_with_nikkud) &&
+              !hasSameDisplayedNikkud(
+                occurrence.gemaraWord,
+                selectedWord.ai_verification.corrected_nikkud_word || ""
+              )
+          ),
+        },
+      ]
+    : [];
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-[#2D1B0E] font-sans">
@@ -1054,75 +1151,182 @@ const App = () => {
                 <div className="p-4 pt-0">
                   <header className="border-b-2 border-[#1F130B]/10 pb-2 flex justify-between items-center mb-3">
                     <h4 className="font-serif text-base text-[#1F130B]">
-                      Sources Guemara ({selectedWord.gemara_pages.length})
+                      Sources Guemara ({selectedOccurrences.length})
                     </h4>
                     <BookOpen className="w-4 h-4 opacity-10" />
                   </header>
 
-                  {selectedWord.gemara_pages.length === 0 ? (
+                  {selectedOccurrences.length === 0 ? (
                     <div className="py-8 text-center border-2 border-dashed border-gray-100 rounded-xl italic text-[11px] text-gray-400">
                       Aucune source trouvée.
                     </div>
-                  ) : (
+                  ) : shouldGroupOccurrences ? (
                     <div className="space-y-4">
-                      {selectedWord.gemara_pages.map((page, pageIndex) => (
+                      {selectedOccurrenceGroups.map((group) => (
+                        <section key={group.key} className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h5 className="font-serif text-sm text-[#1F130B]">
+                              {group.title}
+                            </h5>
+                            <span className="text-[10px] uppercase font-bold opacity-40">
+                              {group.occurrences.length} ressource(s)
+                            </span>
+                          </div>
+
+                          {group.occurrences.length === 0 ? (
+                            <div className="py-4 text-center border border-dashed border-[#D4C3A3] rounded-lg italic text-[11px] text-gray-400 bg-white">
+                              Aucune occurrence dans cette catégorie.
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              {group.occurrences.map((occurrence, occurrenceIndex) => (
+                                <div
+                                  key={`${group.key}-${occurrence.pageLabel}-${occurrenceIndex}`}
+                                  className="border border-[#D4C3A3] rounded-lg overflow-hidden bg-white"
+                                >
+                                  <div className="flex justify-between items-center bg-[#F6F1E6] px-3 py-2 border-b border-[#D4C3A3]/40">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-[8px] opacity-35 font-bold uppercase">
+                                        occ. {occurrence.occurrenceIndex + 1}
+                                      </span>
+                                      {selectedDictionaryNikkudWord &&
+                                      hasSameDisplayedNikkud(
+                                        occurrence.gemaraWord,
+                                        selectedDictionaryNikkudWord
+                                      ) ? (
+                                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200 font-bold uppercase">
+                                          Dictionnaire
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                    <h5 className="font-serif text-sm font-bold" dir="rtl">
+                                      {occurrence.pageLabel}
+                                    </h5>
+                                  </div>
+
+                                  <div className="px-3 py-2.5">
+                                    <p
+                                      className="text-right font-serif text-lg leading-loose"
+                                      dir="rtl"
+                                    >
+                                      {occurrence.before.slice(-5).length > 0 && (
+                                        <span className="opacity-40">
+                                          {occurrence.before.slice(-5).join(" ")}{" "}
+                                        </span>
+                                      )}
+                                      <span className="text-[#8B5E3C] font-black px-1.5 bg-amber-50 rounded border border-amber-200">
+                                        {occurrence.gemaraWord}
+                                      </span>
+                                      {occurrence.after.slice(0, 5).length > 0 && (
+                                        <span className="opacity-40">
+                                          {" "}{occurrence.after.slice(0, 5).join(" ")}
+                                        </span>
+                                      )}
+                                    </p>
+                                    {occurrence.steinsaltzContext && (
+                                      <p
+                                        className="text-right font-serif text-xs text-gray-400 italic mt-1 leading-relaxed"
+                                        dir="rtl"
+                                      >
+                                        {occurrence.steinsaltzContext.slice(0, 120)}
+                                        {occurrence.steinsaltzContext.length > 120 ? "…" : ""}
+                                      </p>
+                                    )}
+                                  </div>
+
+                                  {(occurrence.urlNikud || occurrence.urlExplain) && (
+                                    <div className="flex gap-4 px-3 py-1.5 bg-gray-50/60 border-t border-[#D4C3A3]/30">
+                                      {occurrence.urlNikud && (
+                                        <a
+                                          href={occurrence.urlNikud}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="text-[9px] text-[#C4A35A] font-bold uppercase tracking-wide hover:underline"
+                                        >
+                                          ↗ Texte vocalisé
+                                        </a>
+                                      )}
+                                      {occurrence.urlExplain && (
+                                        <a
+                                          href={occurrence.urlExplain}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="text-[9px] text-[#C4A35A] font-bold uppercase tracking-wide hover:underline"
+                                        >
+                                          ↗ Explication
+                                        </a>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </section>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {selectedOccurrences.map((occurrence, occurrenceIndex) => (
                         <div
-                          key={pageIndex}
+                          key={`${occurrence.pageLabel}-${occurrenceIndex}`}
                           className="border border-[#D4C3A3] rounded-lg overflow-hidden bg-white"
                         >
                           <div className="flex justify-between items-center bg-[#F6F1E6] px-3 py-2 border-b border-[#D4C3A3]/40">
-                            <span className="text-[8px] opacity-35 font-bold uppercase">
-                              {page.occurrences.length} occ.
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[8px] opacity-35 font-bold uppercase">
+                                occ. {occurrence.occurrenceIndex + 1}
+                              </span>
+                              {selectedDictionaryNikkudWord &&
+                              hasSameDisplayedNikkud(
+                                occurrence.gemaraWord,
+                                selectedDictionaryNikkudWord
+                              ) ? (
+                                <span className="text-[9px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200 font-bold uppercase">
+                                  Dictionnaire
+                                </span>
+                              ) : null}
+                            </div>
                             <h5 className="font-serif text-sm font-bold" dir="rtl">
-                              {page.label}
+                              {occurrence.pageLabel}
                             </h5>
                           </div>
 
-                          {page.occurrences.map((occ, occurrenceIndex) => (
-                            <div
-                              key={occurrenceIndex}
-                              className={`px-3 py-2.5 ${
-                                occurrenceIndex < page.occurrences.length - 1
-                                  ? "border-b border-[#D4C3A3]/30"
-                                  : ""
-                              }`}
+                          <div className="px-3 py-2.5">
+                            <p
+                              className="text-right font-serif text-lg leading-loose"
+                              dir="rtl"
                             >
+                              {occurrence.before.slice(-5).length > 0 && (
+                                <span className="opacity-40">
+                                  {occurrence.before.slice(-5).join(" ")}{" "}
+                                </span>
+                              )}
+                              <span className="text-[#8B5E3C] font-black px-1.5 bg-amber-50 rounded border border-amber-200">
+                                {occurrence.gemaraWord}
+                              </span>
+                              {occurrence.after.slice(0, 5).length > 0 && (
+                                <span className="opacity-40">
+                                  {" "}{occurrence.after.slice(0, 5).join(" ")}
+                                </span>
+                              )}
+                            </p>
+                            {occurrence.steinsaltzContext && (
                               <p
-                                className="text-right font-serif text-lg leading-loose"
+                                className="text-right font-serif text-xs text-gray-400 italic mt-1 leading-relaxed"
                                 dir="rtl"
                               >
-                                {occ.gemara.before.slice(-5).length > 0 && (
-                                  <span className="opacity-40">
-                                    {occ.gemara.before.slice(-5).join(" ")}{" "}
-                                  </span>
-                                )}
-                                <span className="text-[#8B5E3C] font-black px-1.5 bg-amber-50 rounded border border-amber-200">
-                                  {occ.gemara.word}
-                                </span>
-                                {occ.gemara.after.slice(0, 5).length > 0 && (
-                                  <span className="opacity-40">
-                                    {" "}{occ.gemara.after.slice(0, 5).join(" ")}
-                                  </span>
-                                )}
+                                {occurrence.steinsaltzContext.slice(0, 120)}
+                                {occurrence.steinsaltzContext.length > 120 ? "…" : ""}
                               </p>
-                              {occ.steinsaltz?.full_context && (
-                                <p
-                                  className="text-right font-serif text-xs text-gray-400 italic mt-1 leading-relaxed"
-                                  dir="rtl"
-                                >
-                                  {occ.steinsaltz.full_context.slice(0, 120)}
-                                  {occ.steinsaltz.full_context.length > 120 ? "…" : ""}
-                                </p>
-                              )}
-                            </div>
-                          ))}
+                            )}
+                          </div>
 
-                          {(page.url_nikud || page.url_explain) && (
+                          {(occurrence.urlNikud || occurrence.urlExplain) && (
                             <div className="flex gap-4 px-3 py-1.5 bg-gray-50/60 border-t border-[#D4C3A3]/30">
-                              {page.url_nikud && (
+                              {occurrence.urlNikud && (
                                 <a
-                                  href={page.url_nikud}
+                                  href={occurrence.urlNikud}
                                   target="_blank"
                                   rel="noreferrer"
                                   className="text-[9px] text-[#C4A35A] font-bold uppercase tracking-wide hover:underline"
@@ -1130,9 +1334,9 @@ const App = () => {
                                   ↗ Texte vocalisé
                                 </a>
                               )}
-                              {page.url_explain && (
+                              {occurrence.urlExplain && (
                                 <a
-                                  href={page.url_explain}
+                                  href={occurrence.urlExplain}
                                   target="_blank"
                                   rel="noreferrer"
                                   className="text-[9px] text-[#C4A35A] font-bold uppercase tracking-wide hover:underline"
