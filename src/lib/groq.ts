@@ -1,4 +1,4 @@
-import { AIVerification, WordEntry } from "../types";
+import { AIVerification, AIVerificationTrial, WordEntry } from "../types";
 
 interface VerificationResult extends AIVerification {
   nikkud_correct: boolean | null;
@@ -26,23 +26,31 @@ interface ErrorVerificationDetails {
   failed_raw_ai_model: string | null;
   failed_raw_ai_error: string;
   last_error: string;
+  ai_trials: AIVerificationTrial[];
 }
 
 class GroqRequestError extends Error {
+  model: string;
   status: number;
   retryAfterMs: number;
 
-  constructor(message: string, status: number, retryAfterMs: number = 30000) {
+  constructor(
+    message: string,
+    model: string,
+    status: number,
+    retryAfterMs: number = 30000
+  ) {
     super(message);
     this.name = "GroqRequestError";
+    this.model = model;
     this.status = status;
     this.retryAfterMs = retryAfterMs;
   }
 }
 
 class GroqRateLimitError extends GroqRequestError {
-  constructor(message: string, retryAfterMs: number) {
-    super(message, 429, retryAfterMs);
+  constructor(message: string, model: string, retryAfterMs: number) {
+    super(message, model, 429, retryAfterMs);
     this.name = "GroqRateLimitError";
   }
 }
@@ -132,12 +140,14 @@ const buildNotes = (notes: string, extraNote?: string): string => {
 
 const createFailureDetails = (
   message: string,
-  invalidJsonFailure?: InvalidJsonFailure
+  invalidJsonFailure?: InvalidJsonFailure,
+  aiTrials: AIVerificationTrial[] = []
 ): ErrorVerificationDetails => ({
   failed_raw_ai_response: invalidJsonFailure?.rawResponse || "",
   failed_raw_ai_model: invalidJsonFailure?.model || null,
   failed_raw_ai_error: invalidJsonFailure?.message || "",
   last_error: message,
+  ai_trials: aiTrials,
 });
 
 const requestVerification = async (
@@ -215,10 +225,10 @@ const requestVerification = async (
   if (!res.ok) {
     const message = await parseApiErrorMessage(res);
     if (res.status === 429) {
-      throw new GroqRateLimitError(message, parseRetryAfterMs(res, message));
+      throw new GroqRateLimitError(message, model, parseRetryAfterMs(res, message));
     }
 
-    throw new GroqRequestError(message, res.status, parseRetryAfterMs(res, message));
+    throw new GroqRequestError(message, model, res.status, parseRetryAfterMs(res, message));
   }
 
   return (await res.json()) as GroqChatCompletionResponse;
@@ -287,7 +297,8 @@ const parseVerificationResponse = (
   entry: WordEntry,
   rawContent: string,
   model: string,
-  priorInvalidJsonFailure?: InvalidJsonFailure
+  priorInvalidJsonFailure?: InvalidJsonFailure,
+  aiTrials: AIVerificationTrial[] = []
 ): VerificationResult => {
   const clean = rawContent.replace(/```json|```/g, "").trim();
   let parsed: Partial<VerificationResult>;
@@ -328,6 +339,7 @@ const parseVerificationResponse = (
     failed_raw_ai_model: priorInvalidJsonFailure?.model || null,
     failed_raw_ai_error: priorInvalidJsonFailure?.message || "",
     last_error: "",
+    ai_trials: aiTrials,
   };
 };
 
@@ -336,8 +348,9 @@ const tryModel = async (
   apiKey: string,
   model: string,
   responseFormat: "json_schema" | "json_object",
-  priorInvalidJsonFailure?: InvalidJsonFailure
-): Promise<VerificationResult> => {
+  priorInvalidJsonFailure?: InvalidJsonFailure,
+  aiTrials: AIVerificationTrial[] = []
+): Promise<{ verification: VerificationResult; rawContent: string }> => {
   const prompt =
     model === JSON_FALLBACK_MODEL ? generateFallbackPrompt(entry) : generatePrompt(entry);
   const data = await requestVerification(prompt, apiKey, model, responseFormat);
@@ -352,7 +365,16 @@ const tryModel = async (
     );
   }
 
-  return parseVerificationResponse(entry, txt, model, priorInvalidJsonFailure);
+  return {
+    verification: parseVerificationResponse(
+      entry,
+      txt,
+      model,
+      priorInvalidJsonFailure,
+      aiTrials
+    ),
+    rawContent: txt,
+  };
 };
 
 const verifyWithGroq = async (
@@ -361,12 +383,36 @@ const verifyWithGroq = async (
 ): Promise<VerificationResult> => {
   let lastRecoverableError: GroqRequestError | null = null;
   let latestInvalidJsonFailure: InvalidJsonFailure | undefined;
+  const aiTrials: AIVerificationTrial[] = [];
 
   for (const apiKey of apiKeys) {
     try {
-      return await tryModel(entry, apiKey, PRIMARY_MODEL, "json_schema");
+      const primaryAttempt = await tryModel(
+        entry,
+        apiKey,
+        PRIMARY_MODEL,
+        "json_schema",
+        undefined,
+        aiTrials
+      );
+      aiTrials.push({
+        model: PRIMARY_MODEL,
+        status: "success",
+        message: "JSON valide reçu.",
+        raw_response: primaryAttempt.rawContent,
+      });
+      return {
+        ...primaryAttempt.verification,
+        ai_trials: [...aiTrials],
+      };
     } catch (error) {
       if (error instanceof GroqInvalidJsonError) {
+        aiTrials.push({
+          model: error.model,
+          status: "invalid_json",
+          message: error.message,
+          raw_response: error.rawResponse,
+        });
         latestInvalidJsonFailure = {
           message: error.message,
           model: error.model,
@@ -374,15 +420,32 @@ const verifyWithGroq = async (
         };
 
         try {
-          return await tryModel(
+          const fallbackAttempt = await tryModel(
             entry,
             apiKey,
             JSON_FALLBACK_MODEL,
             "json_object",
-            latestInvalidJsonFailure
+            latestInvalidJsonFailure,
+            aiTrials
           );
+          aiTrials.push({
+            model: JSON_FALLBACK_MODEL,
+            status: "success",
+            message: "JSON valide reçu.",
+            raw_response: fallbackAttempt.rawContent,
+          });
+          return {
+            ...fallbackAttempt.verification,
+            ai_trials: [...aiTrials],
+          };
         } catch (fallbackError) {
           if (fallbackError instanceof GroqInvalidJsonError) {
+            aiTrials.push({
+              model: fallbackError.model,
+              status: "invalid_json",
+              message: fallbackError.message,
+              raw_response: fallbackError.rawResponse,
+            });
             latestInvalidJsonFailure = {
               message: fallbackError.message,
               model: fallbackError.model,
@@ -395,6 +458,12 @@ const verifyWithGroq = async (
             fallbackError instanceof GroqRequestError &&
             isRecoverableStatus(fallbackError.status)
           ) {
+            aiTrials.push({
+              model: fallbackError.model,
+              status: `api_error_${fallbackError.status}`,
+              message: fallbackError.message,
+              raw_response: "",
+            });
             lastRecoverableError = fallbackError;
             continue;
           }
@@ -404,6 +473,12 @@ const verifyWithGroq = async (
       }
 
       if (error instanceof GroqRequestError && isRecoverableStatus(error.status)) {
+        aiTrials.push({
+          model: error.model,
+          status: `api_error_${error.status}`,
+          message: error.message,
+          raw_response: "",
+        });
         lastRecoverableError = error;
         continue;
       }
@@ -417,7 +492,8 @@ const verifyWithGroq = async (
       "Aucune clé n'a permis d'obtenir un JSON valide.",
       createFailureDetails(
         "Aucune clé n'a permis d'obtenir un JSON valide.",
-        latestInvalidJsonFailure
+        latestInvalidJsonFailure,
+        aiTrials
       )
     );
   }
@@ -432,13 +508,17 @@ const verifyWithGroq = async (
   if (lastRecoverableError) {
     throw new GroqAllKeysFailedError(
       lastRecoverableError.message,
-      createFailureDetails(lastRecoverableError.message)
+      createFailureDetails(lastRecoverableError.message, undefined, aiTrials)
     );
   }
 
   throw new GroqAllKeysFailedError(
     "Toutes les clés ont échoué sans réponse exploitable.",
-    createFailureDetails("Toutes les clés ont échoué sans réponse exploitable.")
+    createFailureDetails(
+      "Toutes les clés ont échoué sans réponse exploitable.",
+      undefined,
+      aiTrials
+    )
   );
 };
 
@@ -454,7 +534,14 @@ const extractVerificationErrorDetails = (
       message: error.message,
       model: error.model,
       rawResponse: error.rawResponse,
-    });
+    }, [
+      {
+        model: error.model,
+        status: "invalid_json",
+        message: error.message,
+        raw_response: error.rawResponse,
+      },
+    ]);
   }
 
   if (error instanceof Error) {
@@ -463,6 +550,7 @@ const extractVerificationErrorDetails = (
       failed_raw_ai_model: null,
       failed_raw_ai_error: "",
       last_error: error.message,
+      ai_trials: [],
     };
   }
 

@@ -41,6 +41,14 @@ export interface AIVerification {
   failed_raw_ai_model?: string | null;
   failed_raw_ai_error?: string;
   last_error?: string;
+  ai_trials?: AIVerificationTrial[];
+}
+
+export interface AIVerificationTrial {
+  model: string;
+  status: string;
+  message: string;
+  raw_response: string;
 }
 
 export interface WordEntry {

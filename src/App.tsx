@@ -1,8 +1,9 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Loader2, FileUp, Download, Play, Square, Info, CheckCircle2,
   XCircle, Search, BookOpen, Layers, FileJson, X, Key, Eye, EyeOff,
+  ArrowUpDown,
 } from "lucide-react";
 import {
   verifyWithGroq,
@@ -10,13 +11,24 @@ import {
   isRateLimitError,
   extractVerificationErrorDetails,
 } from "./lib/groq";
-import { AIVerification, WordEntry } from "./types";
+import { AIVerification, AIVerificationTrial, WordEntry } from "./types";
 
 const DELAY_BETWEEN_WORDS_MS = 600;
 const RATE_LIMIT_BUFFER_MS = 1200;
 const MAX_RATE_LIMIT_RETRIES_PER_WORD = 8;
 const KEY_GROUP_SIZE = 2;
 const HEBREW_MARK_REGEX = /[\u0591-\u05C7]/;
+
+type SortKey =
+  | "index"
+  | "word"
+  | "dictionary"
+  | "meaning"
+  | "status"
+  | "exact"
+  | "correction";
+type SortDirection = "asc" | "desc";
+
 const EMPTY_AI_VERIFICATION: AIVerification = {
   nikkud_correct: null,
   corrected_nikkud_word: null,
@@ -27,6 +39,7 @@ const EMPTY_AI_VERIFICATION: AIVerification = {
   failed_raw_ai_model: null,
   failed_raw_ai_error: "",
   last_error: "",
+  ai_trials: [],
 };
 
 const rowsToCSV = (rows: Record<string, unknown>[]) => {
@@ -36,14 +49,18 @@ const rowsToCSV = (rows: Record<string, unknown>[]) => {
     const text = String(v ?? "");
     return text.includes(",") || text.includes("\n") ? `"${text.replace(/"/g, "\"\"")}"` : text;
   };
+
   return [
     allKeys.join(","),
-    ...rows.map((r) => allKeys.map((k) => escape(r[k])).join(",")),
+    ...rows.map((row) => allKeys.map((key) => escape(row[key])).join(",")),
   ].join("\n");
 };
 
 const wait = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
+
+const normalizeTrials = (trials?: AIVerificationTrial[]): AIVerificationTrial[] =>
+  Array.isArray(trials) ? trials : [];
 
 const normalizeAiVerification = (
   verification?: Partial<AIVerification> | null
@@ -53,6 +70,7 @@ const normalizeAiVerification = (
   pages_same_meaning: Array.isArray(verification?.pages_same_meaning)
     ? verification?.pages_same_meaning
     : [],
+  ai_trials: normalizeTrials(verification?.ai_trials),
 });
 
 const getImportedStatus = (entry: WordEntry): WordEntry["_status"] => {
@@ -68,22 +86,34 @@ const getImportedStatus = (entry: WordEntry): WordEntry["_status"] => {
 const isEntryAlreadyAnalyzed = (entry: WordEntry): boolean =>
   getImportedStatus(entry) === "done";
 
-const parseApiKeys = (value: string): string[] =>
-  value
-    .split(/[\n,]+/)
-    .map((key) => key.trim())
-    .filter(Boolean);
+const normalizeKeyInputs = (inputs: string[]): string[] => {
+  const next = [...inputs];
 
-const maskApiKeys = (value: string): string =>
-  parseApiKeys(value)
-    .map((key) => `${key.slice(0, 4)}${"•".repeat(Math.max(4, key.length - 8))}${key.slice(-4)}`)
-    .join("\n");
+  while (next.length > 1 && next[next.length - 1] === "" && next[next.length - 2] === "") {
+    next.pop();
+  }
+
+  if (next.every((value) => value === "")) {
+    return [""];
+  }
+
+  if (next[next.length - 1] !== "") {
+    next.push("");
+  }
+
+  return next;
+};
+
+const getUsableApiKeys = (inputs: string[]): string[] =>
+  inputs.map((key) => key.trim()).filter(Boolean);
 
 const groupKeysByWord = (keys: string[]): string[][] => {
   const groups: string[][] = [];
+
   for (let i = 0; i < keys.length; i += KEY_GROUP_SIZE) {
     groups.push(keys.slice(i, i + KEY_GROUP_SIZE));
   }
+
   return groups;
 };
 
@@ -156,23 +186,62 @@ const renderComparedWord = (
   );
 };
 
+const getEffectiveModelUsed = (verification: AIVerification): string | null => {
+  if (verification.model_used) {
+    return verification.model_used;
+  }
+
+  const successTrial = [...normalizeTrials(verification.ai_trials)]
+    .reverse()
+    .find((trial) => trial.status === "success");
+
+  return successTrial?.model || verification.failed_raw_ai_model || null;
+};
+
+const getStatusRank = (status?: WordEntry["_status"]): number => {
+  switch (status) {
+    case "done":
+      return 3;
+    case "processing":
+      return 2;
+    case "error":
+      return 1;
+    default:
+      return 0;
+  }
+};
+
+const getTrialTone = (trial: AIVerificationTrial): string => {
+  if (trial.status === "success") {
+    return "text-green-700 border-green-200 bg-green-50";
+  }
+
+  if (trial.status === "invalid_json") {
+    return "text-amber-800 border-amber-200 bg-amber-50";
+  }
+
+  return "text-red-700 border-red-200 bg-red-50";
+};
+
 const App = () => {
   const [results, setResults] = useState<WordEntry[]>([]);
-  const [apiKeysText, setApiKeysText] = useState("");
+  const [apiKeyInputs, setApiKeyInputs] = useState<string[]>([""]);
   const [showKeys, setShowKeys] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [statusMsg, setStatusMsg] = useState("");
   const [selectedWordIdx, setSelectedWordIdx] = useState<number | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>("index");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
   const fileRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef(false);
   const resultsRef = useRef<WordEntry[]>([]);
   resultsRef.current = results;
 
-  const parsedApiKeys = parseApiKeys(apiKeysText);
-  const keyGroups = groupKeysByWord(parsedApiKeys);
+  const usableApiKeys = getUsableApiKeys(apiKeyInputs);
+  const keyGroups = groupKeysByWord(usableApiKeys);
 
   const handleFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -183,14 +252,17 @@ const App = () => {
         const raw = JSON.parse(ev.target?.result as string);
         const list: WordEntry[] = Array.isArray(raw) ? raw : [raw];
         setResults(
-          list.map((entry) => ({
-            ...entry,
-            ai_verification: normalizeAiVerification(entry.ai_verification),
-            _status: getImportedStatus({
+          list.map((entry) => {
+            const aiVerification = normalizeAiVerification(entry.ai_verification);
+            return {
               ...entry,
-              ai_verification: normalizeAiVerification(entry.ai_verification),
-            }),
-          }))
+              ai_verification: aiVerification,
+              _status: getImportedStatus({
+                ...entry,
+                ai_verification: aiVerification,
+              }),
+            };
+          })
         );
         setStatusMsg(`${list.length} mot${list.length > 1 ? "s" : ""} chargé${list.length > 1 ? "s" : ""}.`);
         setSelectedWordIdx(null);
@@ -202,9 +274,27 @@ const App = () => {
     e.target.value = "";
   }, []);
 
+  const handleApiKeyChange = (index: number, value: string) => {
+    setApiKeyInputs((prev) => {
+      const next = [...prev];
+      next[index] = value;
+      return normalizeKeyInputs(next);
+    });
+  };
+
+  const handleSort = (nextKey: SortKey) => {
+    if (sortKey === nextKey) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+      return;
+    }
+
+    setSortKey(nextKey);
+    setSortDirection("asc");
+  };
+
   const handleStartProcess = async () => {
     if (results.length === 0) return;
-    if (parsedApiKeys.length === 0) {
+    if (usableApiKeys.length === 0) {
       setStatusMsg("⚠️ Entrez au moins une clé API Groq.");
       return;
     }
@@ -332,23 +422,78 @@ const App = () => {
     }
   };
 
+  const sortedResults = useMemo(() => {
+    const rows = results.map((entry, originalIndex) => ({ entry, originalIndex }));
+
+    rows.sort((left, right) => {
+      let leftValue: string | number | boolean | null = left.originalIndex;
+      let rightValue: string | number | boolean | null = right.originalIndex;
+
+      switch (sortKey) {
+        case "word":
+          leftValue = left.entry.word_with_nikkud;
+          rightValue = right.entry.word_with_nikkud;
+          break;
+        case "dictionary":
+          leftValue = left.entry.dictionary?.meaning || "";
+          rightValue = right.entry.dictionary?.meaning || "";
+          break;
+        case "meaning":
+          leftValue = left.entry.french_meaning;
+          rightValue = right.entry.french_meaning;
+          break;
+        case "status":
+          leftValue = getStatusRank(left.entry._status);
+          rightValue = getStatusRank(right.entry._status);
+          break;
+        case "exact":
+          leftValue = getExactMatchFlag(left.entry);
+          rightValue = getExactMatchFlag(right.entry);
+          break;
+        case "correction":
+          leftValue = left.entry.ai_verification.corrected_nikkud_word || "";
+          rightValue = right.entry.ai_verification.corrected_nikkud_word || "";
+          break;
+        default:
+          break;
+      }
+
+      if (leftValue === null) return 1;
+      if (rightValue === null) return -1;
+
+      const comparison =
+        typeof leftValue === "number" && typeof rightValue === "number"
+          ? leftValue - rightValue
+          : String(leftValue).localeCompare(String(rightValue), "fr");
+
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
+
+    return rows;
+  }, [results, sortDirection, sortKey]);
+
   const handleExportCSV = () => {
-    const csvRows = results.map((r) => ({
-      "Mot (Nikkud)": r.word_with_nikkud,
-      "Sens (Attendu)": r.french_meaning,
-      Dictionnaire: r.dictionary?.meaning || "",
-      "Correct?":
-        r.ai_verification.nikkud_correct === true
-          ? "✓"
-          : r.ai_verification.nikkud_correct === false
-          ? "✗"
-          : "?",
-      "Meme exact?":
-        getExactMatchFlag(r) === null ? "-" : getExactMatchFlag(r) ? "true" : "false",
-      Correction: r.ai_verification.corrected_nikkud_word || "-",
-      Modele: r.ai_verification.model_used || "",
-      Notes: r.ai_verification.notes || "",
-    }));
+    const csvRows = results.map((entry) => {
+      const modelUsed = getEffectiveModelUsed(entry.ai_verification);
+      const exactMatch = getExactMatchFlag(entry);
+      return {
+        "Mot (Nikkud)": entry.word_with_nikkud,
+        Dictionnaire: entry.dictionary?.meaning || "",
+        "Sens (Attendu)": entry.french_meaning,
+        "Correct?":
+          entry.ai_verification.nikkud_correct === true
+            ? "✓"
+            : entry.ai_verification.nikkud_correct === false
+            ? "✗"
+            : "?",
+        "Meme exact?":
+          exactMatch === null ? "-" : exactMatch ? "true" : "false",
+        Correction: entry.ai_verification.corrected_nikkud_word || "-",
+        Modele: modelUsed || "",
+        Notes: entry.ai_verification.notes || "",
+      };
+    });
+
     const csv = rowsToCSV(csvRows);
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -375,10 +520,12 @@ const App = () => {
   const selectedWord = selectedWordIdx !== null ? results[selectedWordIdx] : null;
   const doneN = results.filter((entry) => entry._status === "done").length;
   const corrN = results.filter(
-    (entry) => entry._status === "done" && entry.ai_verification?.nikkud_correct === true
+    (entry) => entry._status === "done" && entry.ai_verification.nikkud_correct === true
   ).length;
   const selectedExactMatch = selectedWord ? getExactMatchFlag(selectedWord) : null;
-  const displayedKeysText = showKeys ? apiKeysText : maskApiKeys(apiKeysText);
+  const selectedModelUsed = selectedWord
+    ? getEffectiveModelUsed(selectedWord.ai_verification)
+    : null;
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-[#2D1B0E] font-sans">
@@ -399,29 +546,35 @@ const App = () => {
                 <Key className="w-3.5 h-3.5" /> Clés API Groq
               </h2>
               <div className="space-y-2">
-                <textarea
-                  value={displayedKeysText}
-                  onChange={(e) => showKeys && setApiKeysText(e.target.value)}
-                  readOnly={!showKeys}
-                  placeholder={"gsk_...\ngsk_..."}
-                  rows={Math.max(4, Math.min(8, parsedApiKeys.length || 4))}
-                  className="w-full py-2 px-3 rounded border border-[#D4C3A3] text-xs font-mono bg-white focus:outline-none focus:border-[#C4A35A] resize-y"
-                />
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-[9px] opacity-40">
-                    2 clés par mot. {keyGroups.length} file(s) parallèle(s).
-                  </p>
-                  <button
-                    onClick={() => setShowKeys((value) => !value)}
-                    className="text-[10px] font-bold uppercase text-[#8B5E3C] flex items-center gap-1"
-                  >
-                    {showKeys ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    {showKeys ? "Masquer" : "Afficher"}
-                  </button>
-                </div>
+                {apiKeyInputs.map((apiKey, index) => (
+                  <div key={index} className="relative">
+                    <input
+                      type={showKeys ? "text" : "password"}
+                      placeholder="gsk_..."
+                      value={apiKey}
+                      onChange={(e) => handleApiKeyChange(index, e.target.value)}
+                      className="w-full pr-8 py-2 px-3 rounded border border-[#D4C3A3] text-xs font-mono bg-white focus:outline-none focus:border-[#C4A35A]"
+                    />
+                    {index === 0 && (
+                      <button
+                        onClick={() => setShowKeys((value) => !value)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 opacity-40 hover:opacity-70 transition-opacity"
+                      >
+                        {showKeys ? (
+                          <EyeOff className="w-3.5 h-3.5" />
+                        ) : (
+                          <Eye className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <p className="text-[9px] opacity-40">
+                  2 clés par mot. {keyGroups.length} file(s) parallèle(s).
+                </p>
               </div>
               <p className="text-[9px] opacity-35 mt-1.5">
-                Une clé par ligne ou séparée par des virgules.
+                Remplissez une clé, puis un nouveau champ apparaît automatiquement.
               </p>
             </section>
 
@@ -539,68 +692,96 @@ const App = () => {
                   <table className="w-full text-left border-collapse table-fixed">
                     <thead className="sticky top-0 bg-[#F6F1E6] z-10">
                       <tr className="border-b border-[#D4C3A3] text-[9px] font-bold text-[#8B5E3C] uppercase">
-                        <th className="p-3 w-10 text-center">#</th>
-                        <th className="p-3 w-36">Mot (Nikkud)</th>
-                        <th className="p-3 w-32">Dictionnaire</th>
-                        <th className="p-3">Sens français</th>
-                        <th className="p-3 w-16 text-center">Statut</th>
-                        <th className="p-3 w-32 text-center">Même exact ?</th>
-                        <th className="p-3 w-36">Correction IA</th>
+                        {[
+                          ["index", "#", "w-10 text-center"],
+                          ["word", "Mot (Nikkud)", "w-40"],
+                          ["dictionary", "Dictionnaire", "w-36"],
+                          ["meaning", "Sens français", ""],
+                          ["status", "Statut", "w-20 text-center"],
+                          ["exact", "Même exact ?", "w-24 text-center"],
+                          ["correction", "Correction IA", "w-40"],
+                        ].map(([key, label, className]) => (
+                          <th key={key} className={`p-3 ${className}`}>
+                            <button
+                              onClick={() => handleSort(key as SortKey)}
+                              className="flex items-center gap-1 w-full"
+                            >
+                              <span>{label}</span>
+                              <ArrowUpDown className="w-3 h-3 opacity-40" />
+                            </button>
+                          </th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#D4C3A3]/20">
-                      {results.map((res, i) => {
-                        const exactMatchFlag = getExactMatchFlag(res);
+                      {sortedResults.map(({ entry, originalIndex }) => {
+                        const exactMatchFlag = getExactMatchFlag(entry);
+                        const hasCorrection =
+                          entry.ai_verification.nikkud_correct === false &&
+                          Boolean(entry.ai_verification.corrected_nikkud_word);
+
                         return (
                           <tr
-                            key={i}
-                            onClick={() => setSelectedWordIdx(i)}
+                            key={originalIndex}
+                            onClick={() => setSelectedWordIdx(originalIndex)}
                             className={`cursor-pointer hover:bg-[#FDFBF7] transition-colors ${
-                              selectedWordIdx === i ? "bg-[#F6F1E6]" : ""
+                              selectedWordIdx === originalIndex ? "bg-[#F6F1E6]" : ""
                             }`}
                           >
-                            <td className="p-3 text-center text-[10px] font-bold opacity-25">{i + 1}</td>
-                            <td className="p-3 text-right font-serif text-2xl" dir="rtl">
-                              {res.word_with_nikkud}
+                            <td className="p-3 text-center text-[10px] font-bold opacity-25">{originalIndex + 1}</td>
+                            <td className="p-3 text-right font-serif text-xl leading-loose" dir="rtl">
+                              {hasCorrection
+                                ? renderComparedWord(
+                                    entry.word_with_nikkud,
+                                    entry.ai_verification.corrected_nikkud_word || "",
+                                    "original"
+                                  )
+                                : entry.word_with_nikkud}
                             </td>
                             <td className="p-3 text-[10px] leading-relaxed opacity-65">
-                              <div className="line-clamp-3">{res.dictionary?.meaning || "—"}</div>
+                              <div className="line-clamp-3">{entry.dictionary?.meaning || "—"}</div>
                             </td>
                             <td className="p-3 text-[11px] truncate opacity-60">
-                              {res.french_meaning}
+                              {entry.french_meaning}
                             </td>
                             <td className="p-3 text-center">
-                              {res._status === "done" ? (
-                                res.ai_verification.nikkud_correct ? (
+                              {entry._status === "done" ? (
+                                entry.ai_verification.nikkud_correct ? (
                                   <CheckCircle2 className="w-4 h-4 text-green-600 mx-auto" />
                                 ) : (
                                   <XCircle className="w-4 h-4 text-red-700 mx-auto" />
                                 )
-                              ) : res._status === "processing" ? (
+                              ) : entry._status === "processing" ? (
                                 <Loader2 className="w-4 h-4 animate-spin mx-auto text-[#C4A35A]" />
-                              ) : res._status === "error" ? (
+                              ) : entry._status === "error" ? (
                                 <span className="text-orange-500 font-bold">!</span>
                               ) : (
                                 <span className="inline-block w-2 h-2 rounded-full bg-[#D4C3A3]" />
                               )}
                             </td>
-                            <td className="p-3 text-center text-[10px] font-bold">
+                            <td className="p-3 text-center">
                               {exactMatchFlag === null ? (
-                                <span className="opacity-30">—</span>
+                                <span className="inline-block w-2 h-2 rounded-full bg-[#D4C3A3]" />
                               ) : exactMatchFlag ? (
-                                <span className="text-green-700">true</span>
+                                <CheckCircle2 className="w-4 h-4 text-green-600 mx-auto" />
                               ) : (
-                                <span className="text-red-700">false</span>
+                                <XCircle className="w-4 h-4 text-red-700 mx-auto" />
                               )}
                             </td>
                             <td
-                              className="p-3 text-right font-serif text-xl font-bold text-green-800"
+                              className="p-3 text-right font-serif text-lg font-bold text-green-800 leading-loose"
                               dir="rtl"
                             >
-                              {res._status === "done"
-                                ? res.ai_verification.nikkud_correct
+                              {entry._status === "done"
+                                ? entry.ai_verification.nikkud_correct
                                   ? <CheckCircle2 className="w-4 h-4 text-green-600 ml-auto" />
-                                  : res.ai_verification.corrected_nikkud_word || "—"
+                                  : entry.ai_verification.corrected_nikkud_word
+                                  ? renderComparedWord(
+                                      entry.ai_verification.corrected_nikkud_word,
+                                      entry.word_with_nikkud,
+                                      "corrected"
+                                    )
+                                  : "—"
                                 : "—"}
                             </td>
                           </tr>
@@ -631,7 +812,7 @@ const App = () => {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="absolute right-0 top-0 h-full w-[92vw] lg:w-[560px] bg-white border-l-2 border-[#1F130B] shadow-2xl pointer-events-auto flex flex-col"
+              className="absolute right-0 top-0 h-full w-[92vw] lg:w-[620px] bg-white border-l-2 border-[#1F130B] shadow-2xl pointer-events-auto flex flex-col"
             >
               <div className="bg-[#1F130B] text-white p-4 shrink-0">
                 <div className="flex justify-between items-center mb-3">
@@ -701,7 +882,7 @@ const App = () => {
                 {selectedWord._status === "done" && (
                   <div className="p-4 space-y-3">
                     <div className="flex items-center justify-between gap-3 text-[10px] uppercase font-bold text-[#8B5E3C]">
-                      <span>Modèle utilisé : {selectedWord.ai_verification.model_used || "—"}</span>
+                      <span>Modèle utilisé : {selectedModelUsed || "—"}</span>
                       {selectedExactMatch !== null && (
                         <span className={selectedExactMatch ? "text-green-700" : "text-red-700"}>
                           Même exact ? {selectedExactMatch ? "true" : "false"}
@@ -784,16 +965,16 @@ const App = () => {
                       </div>
                     )}
 
-                    {selectedWord.ai_verification.pages_same_meaning?.length > 0 && (
+                    {selectedWord.ai_verification.pages_same_meaning.length > 0 && (
                       <div className="bg-white border border-[#D4C3A3] p-3 rounded-lg">
                         <h4 className="text-[9px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5 text-[#8B5E3C]">
                           <BookOpen className="w-3 h-3" /> Même sens —{" "}
                           {selectedWord.ai_verification.pages_same_meaning.length} page(s)
                         </h4>
                         <div className="flex flex-wrap gap-1.5">
-                          {selectedWord.ai_verification.pages_same_meaning.map((page, i) => (
+                          {selectedWord.ai_verification.pages_same_meaning.map((page, index) => (
                             <span
-                              key={i}
+                              key={index}
                               className="text-xs px-2.5 py-0.5 rounded-full bg-[#F6F1E6] border border-[#D4C3A3] font-serif"
                               dir="rtl"
                             >
@@ -806,20 +987,27 @@ const App = () => {
                   </div>
                 )}
 
-                {selectedWord.ai_verification.failed_raw_ai_response && (
+                {normalizeTrials(selectedWord.ai_verification.ai_trials).length > 0 && (
                   <div className="px-4 pb-4">
-                    <div className="bg-[#FFF8E7] border border-amber-200 p-3 rounded-lg">
-                      <h4 className="text-[9px] font-black uppercase tracking-widest mb-2 text-[#8B5E3C]">
-                        Réponse brute non JSON ({selectedWord.ai_verification.failed_raw_ai_model || "IA"})
+                    <div className="bg-white border border-[#D4C3A3] p-3 rounded-lg space-y-3">
+                      <h4 className="text-[9px] font-black uppercase tracking-widest text-[#8B5E3C]">
+                        Historique des essais IA
                       </h4>
-                      {selectedWord.ai_verification.failed_raw_ai_error && (
-                        <p className="text-xs text-amber-800 mb-2">
-                          {selectedWord.ai_verification.failed_raw_ai_error}
-                        </p>
-                      )}
-                      <pre className="text-[10px] whitespace-pre-wrap break-words bg-white border border-amber-100 rounded p-3 font-mono text-[#5C3D1E]">
-                        {selectedWord.ai_verification.failed_raw_ai_response}
-                      </pre>
+                      {normalizeTrials(selectedWord.ai_verification.ai_trials).map((trial, index) => (
+                        <div
+                          key={`${trial.model}-${index}`}
+                          className={`border rounded-lg p-3 space-y-2 ${getTrialTone(trial)}`}
+                        >
+                          <div className="flex items-center justify-between gap-2 text-[10px] uppercase font-bold">
+                            <span>{trial.model}</span>
+                            <span>{trial.status}</span>
+                          </div>
+                          <p className="text-xs leading-relaxed">{trial.message}</p>
+                          <pre className="text-[10px] whitespace-pre-wrap break-words bg-white/70 border border-current/15 rounded p-3 font-mono">
+                            {trial.raw_response || trial.message}
+                          </pre>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -853,9 +1041,9 @@ const App = () => {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {selectedWord.gemara_pages.map((page, pIdx) => (
+                      {selectedWord.gemara_pages.map((page, pageIndex) => (
                         <div
-                          key={pIdx}
+                          key={pageIndex}
                           className="border border-[#D4C3A3] rounded-lg overflow-hidden bg-white"
                         >
                           <div className="flex justify-between items-center bg-[#F6F1E6] px-3 py-2 border-b border-[#D4C3A3]/40">
@@ -867,11 +1055,11 @@ const App = () => {
                             </h5>
                           </div>
 
-                          {page.occurrences.map((occ, oIdx) => (
+                          {page.occurrences.map((occ, occurrenceIndex) => (
                             <div
-                              key={oIdx}
+                              key={occurrenceIndex}
                               className={`px-3 py-2.5 ${
-                                oIdx < page.occurrences.length - 1
+                                occurrenceIndex < page.occurrences.length - 1
                                   ? "border-b border-[#D4C3A3]/30"
                                   : ""
                               }`}
