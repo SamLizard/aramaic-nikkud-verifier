@@ -59,6 +59,8 @@ export interface WordEntry {
   dictionary: DictionaryInfo;
   gemara_pages: GemaraPage[];
   ai_verification: AIVerification;
+  manual_status?: "good" | "to_fix" | "need_more_sources" | "to_ask" | null;
+  manual_note?: string;
   // Local UI status
   _status?: "pending" | "processing" | "done" | "error";
 }

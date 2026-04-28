@@ -25,9 +25,12 @@ type SortKey =
   | "dictionary"
   | "meaning"
   | "status"
+  | "manual"
   | "exact"
   | "correction";
 type SortDirection = "asc" | "desc";
+
+type ManualStatus = WordEntry["manual_status"];
 
 const EMPTY_AI_VERIFICATION: AIVerification = {
   nikkud_correct: null,
@@ -41,6 +44,33 @@ const EMPTY_AI_VERIFICATION: AIVerification = {
   last_error: "",
   ai_trials: [],
 };
+
+const MANUAL_STATUS_OPTIONS: Array<{
+  value: NonNullable<ManualStatus>;
+  label: string;
+  className: string;
+}> = [
+  {
+    value: "good",
+    label: "Good",
+    className: "bg-green-100 text-green-800 border-green-200",
+  },
+  {
+    value: "to_fix",
+    label: "To fix",
+    className: "bg-red-100 text-red-800 border-red-200",
+  },
+  {
+    value: "need_more_sources",
+    label: "Need more sources",
+    className: "bg-blue-100 text-blue-800 border-blue-200",
+  },
+  {
+    value: "to_ask",
+    label: "To ask",
+    className: "bg-orange-100 text-orange-800 border-orange-200",
+  },
+];
 
 const rowsToCSV = (rows: Record<string, unknown>[]) => {
   if (!rows.length) return "";
@@ -128,6 +158,9 @@ const getExactMatchFlag = (entry: WordEntry): boolean | null => {
 
   return entry.word_with_nikkud === entry.ai_verification.corrected_nikkud_word;
 };
+
+const getManualStatusOption = (status?: ManualStatus | null) =>
+  MANUAL_STATUS_OPTIONS.find((option) => option.value === status) || null;
 
 const splitVisualClusters = (text: string): string[] => {
   const clusters: string[] = [];
@@ -227,19 +260,6 @@ const extractDictionaryNikkudWord = (entry: WordEntry): string | null => {
 const hasSameDisplayedNikkud = (left: string, right: string): boolean =>
   normalizeDisplayedHebrew(left) === normalizeDisplayedHebrew(right);
 
-const getStatusRank = (status?: WordEntry["_status"]): number => {
-  switch (status) {
-    case "done":
-      return 3;
-    case "processing":
-      return 2;
-    case "error":
-      return 1;
-    default:
-      return 0;
-  }
-};
-
 const getStatusSortRank = (entry: WordEntry): number => {
   if (entry._status === "error") {
     return 0;
@@ -264,6 +284,21 @@ const getStatusSortRank = (entry: WordEntry): number => {
   return 5;
 };
 
+const getManualStatusSortRank = (status?: ManualStatus | null): number => {
+  switch (status) {
+    case "good":
+      return 0;
+    case "to_fix":
+      return 1;
+    case "need_more_sources":
+      return 2;
+    case "to_ask":
+      return 3;
+    default:
+      return 4;
+  }
+};
+
 const getTrialTone = (trial: AIVerificationTrial): string => {
   if (trial.status === "success") {
     return "text-green-700 border-green-200 bg-green-50";
@@ -282,6 +317,7 @@ interface DisplayOccurrence {
   urlExplain: string;
   occurrenceIndex: number;
   gemaraWord: string;
+  fullContext: string;
   before: string[];
   after: string[];
   steinsaltzContext: string;
@@ -295,11 +331,51 @@ const flattenOccurrences = (entry: WordEntry): DisplayOccurrence[] =>
       urlExplain: page.url_explain,
       occurrenceIndex,
       gemaraWord: occurrence.gemara.word,
+      fullContext: occurrence.gemara.full_context,
       before: occurrence.gemara.before,
       after: occurrence.gemara.after,
       steinsaltzContext: occurrence.steinsaltz?.full_context || "",
     }))
   );
+
+const renderOccurrenceContext = (occurrence: DisplayOccurrence) => {
+  const fullContext = occurrence.fullContext || "";
+  const target = occurrence.gemaraWord || "";
+  const targetIndex = target ? fullContext.indexOf(target) : -1;
+
+  if (fullContext && targetIndex >= 0) {
+    const before = fullContext.slice(0, targetIndex);
+    const after = fullContext.slice(targetIndex + target.length);
+
+    return (
+      <>
+        {before ? <span className="opacity-40">{before}</span> : null}
+        <span className="text-[#8B5E3C] font-black px-1.5 bg-amber-50 rounded border border-amber-200">
+          {target}
+        </span>
+        {after ? <span className="opacity-40">{after}</span> : null}
+      </>
+    );
+  }
+
+  return (
+    <>
+      {occurrence.before.slice(-5).length > 0 ? (
+        <span className="opacity-40">
+          {occurrence.before.slice(-5).join(" ")}{" "}
+        </span>
+      ) : null}
+      <span className="text-[#8B5E3C] font-black px-1.5 bg-amber-50 rounded border border-amber-200">
+        {occurrence.gemaraWord}
+      </span>
+      {occurrence.after.slice(0, 5).length > 0 ? (
+        <span className="opacity-40">
+          {" "}{occurrence.after.slice(0, 5).join(" ")}
+        </span>
+      ) : null}
+    </>
+  );
+};
 
 const App = () => {
   const [results, setResults] = useState<WordEntry[]>([]);
@@ -335,6 +411,8 @@ const App = () => {
             return {
               ...entry,
               ai_verification: aiVerification,
+              manual_status: entry.manual_status || null,
+              manual_note: entry.manual_note || "",
               _status: getImportedStatus({
                 ...entry,
                 ai_verification: aiVerification,
@@ -358,6 +436,18 @@ const App = () => {
       next[index] = value;
       return normalizeKeyInputs(next);
     });
+  };
+
+  const updateSelectedWord = (updater: (entry: WordEntry) => WordEntry) => {
+    if (selectedWordIdx === null) {
+      return;
+    }
+
+    setResults((prev) =>
+      prev.map((entry, index) =>
+        index === selectedWordIdx ? updater(entry) : entry
+      )
+    );
   };
 
   const handleSort = (nextKey: SortKey) => {
@@ -524,6 +614,10 @@ const App = () => {
           leftValue = getStatusSortRank(left.entry);
           rightValue = getStatusSortRank(right.entry);
           break;
+        case "manual":
+          leftValue = getManualStatusSortRank(left.entry.manual_status);
+          rightValue = getManualStatusSortRank(right.entry.manual_status);
+          break;
         case "exact":
           leftValue = getExactMatchFlag(left.entry);
           rightValue = getExactMatchFlag(right.entry);
@@ -568,6 +662,8 @@ const App = () => {
           exactMatch === null ? "-" : exactMatch ? "true" : "false",
         Correction: entry.ai_verification.corrected_nikkud_word || "-",
         Modele: modelUsed || "",
+        "Statut manuel": entry.manual_status || "",
+        "Note manuelle": entry.manual_note || "",
         Notes: entry.ai_verification.notes || "",
       };
     });
@@ -604,6 +700,9 @@ const App = () => {
   const selectedModelUsed = selectedWord
     ? getEffectiveModelUsed(selectedWord.ai_verification)
     : null;
+  const selectedManualStatus = selectedWord
+    ? getManualStatusOption(selectedWord.manual_status)
+    : null;
   const selectedDictionaryNikkudWord = selectedWord
     ? extractDictionaryNikkudWord(selectedWord)
     : null;
@@ -619,6 +718,13 @@ const App = () => {
         {
           key: "mine",
           title: "Comme mon nikkud",
+          dictionaryMatch:
+            selectedDictionaryNikkudWord
+              ? hasSameDisplayedNikkud(
+                  selectedWord.word_with_nikkud,
+                  selectedDictionaryNikkudWord
+                )
+              : false,
           occurrences: selectedOccurrences.filter((occurrence) =>
             hasSameDisplayedNikkud(occurrence.gemaraWord, selectedWord.word_with_nikkud)
           ),
@@ -626,6 +732,13 @@ const App = () => {
         {
           key: "ai",
           title: "Comme la correction IA",
+          dictionaryMatch:
+            selectedDictionaryNikkudWord
+              ? hasSameDisplayedNikkud(
+                  selectedWord.ai_verification.corrected_nikkud_word || "",
+                  selectedDictionaryNikkudWord
+                )
+              : false,
           occurrences: selectedOccurrences.filter((occurrence) =>
             hasSameDisplayedNikkud(
               occurrence.gemaraWord,
@@ -636,6 +749,7 @@ const App = () => {
         {
           key: "other",
           title: "Autres nikkudim",
+          dictionaryMatch: false,
           occurrences: selectedOccurrences.filter(
             (occurrence) =>
               !hasSameDisplayedNikkud(occurrence.gemaraWord, selectedWord.word_with_nikkud) &&
@@ -819,6 +933,7 @@ const App = () => {
                           ["dictionary", "Dictionnaire", "w-36"],
                           ["meaning", "Sens français", ""],
                           ["status", "Statut", "w-20 text-center"],
+                          ["manual", "Manuel", "w-28 text-center"],
                           ["exact", "Même exact ?", "w-24 text-center"],
                           ["correction", "Correction IA", "w-40"],
                         ].map(([key, label, className]) => (
@@ -876,6 +991,18 @@ const App = () => {
                                 <Loader2 className="w-4 h-4 animate-spin mx-auto text-[#C4A35A]" />
                               ) : entry._status === "error" ? (
                                 <span className="text-orange-500 font-bold">!</span>
+                              ) : (
+                                <span className="inline-block w-2 h-2 rounded-full bg-[#D4C3A3]" />
+                              )}
+                            </td>
+                            <td className="p-3 text-center">
+                              {getManualStatusOption(entry.manual_status) ? (
+                                <span
+                                  className={`inline-flex items-center justify-center w-4 h-4 rounded-full border ${
+                                    getManualStatusOption(entry.manual_status)?.className
+                                  }`}
+                                  title={getManualStatusOption(entry.manual_status)?.label}
+                                />
                               ) : (
                                 <span className="inline-block w-2 h-2 rounded-full bg-[#D4C3A3]" />
                               )}
@@ -997,6 +1124,54 @@ const App = () => {
                           : "—"}
                       </p>
                     </div>
+                  </div>
+                </div>
+
+                <div className="p-4 pb-0">
+                  <div className="bg-white border border-[#D4C3A3] p-3 rounded-lg space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="text-[9px] font-black uppercase tracking-widest text-[#8B5E3C]">
+                        Revue manuelle
+                      </h4>
+                      {selectedManualStatus ? (
+                        <span className={`px-2 py-0.5 rounded-full border text-[9px] font-bold uppercase ${selectedManualStatus.className}`}>
+                          {selectedManualStatus.label}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {MANUAL_STATUS_OPTIONS.map((option) => {
+                        const isActive = selectedWord.manual_status === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            onClick={() =>
+                              updateSelectedWord((entry) => ({
+                                ...entry,
+                                manual_status: entry.manual_status === option.value ? null : option.value,
+                              }))
+                            }
+                            className={`px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase ${
+                              option.className
+                            } ${isActive ? "ring-2 ring-offset-1 ring-[#8B5E3C]/25" : "opacity-75"}`}
+                          >
+                            {option.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <textarea
+                      value={selectedWord.manual_note || ""}
+                      onChange={(e) =>
+                        updateSelectedWord((entry) => ({
+                          ...entry,
+                          manual_note: e.target.value,
+                        }))
+                      }
+                      placeholder="Note libre pour cette entrée…"
+                      rows={4}
+                      className="w-full py-2 px-3 rounded border border-[#D4C3A3] text-sm bg-[#FDFBF7] focus:outline-none focus:border-[#C4A35A] resize-y"
+                    />
                   </div>
                 </div>
 
@@ -1165,9 +1340,16 @@ const App = () => {
                       {selectedOccurrenceGroups.map((group) => (
                         <section key={group.key} className="space-y-2">
                           <div className="flex items-center justify-between">
-                            <h5 className="font-serif text-sm text-[#1F130B]">
-                              {group.title}
-                            </h5>
+                            <div className="flex items-center gap-2">
+                              <h5 className="font-serif text-sm text-[#1F130B]">
+                                {group.title}
+                              </h5>
+                              {group.dictionaryMatch && selectedDictionaryNikkudWord ? (
+                                <span className="text-[9px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200 font-bold">
+                                  {selectedDictionaryNikkudWord}
+                                </span>
+                              ) : null}
+                            </div>
                             <span className="text-[10px] uppercase font-bold opacity-40">
                               {group.occurrences.length} ressource(s)
                             </span>
@@ -1194,8 +1376,8 @@ const App = () => {
                                         occurrence.gemaraWord,
                                         selectedDictionaryNikkudWord
                                       ) ? (
-                                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200 font-bold uppercase">
-                                          Dictionnaire
+                                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200 font-bold">
+                                          {selectedDictionaryNikkudWord}
                                         </span>
                                       ) : null}
                                     </div>
@@ -1209,19 +1391,7 @@ const App = () => {
                                       className="text-right font-serif text-lg leading-loose"
                                       dir="rtl"
                                     >
-                                      {occurrence.before.slice(-5).length > 0 && (
-                                        <span className="opacity-40">
-                                          {occurrence.before.slice(-5).join(" ")}{" "}
-                                        </span>
-                                      )}
-                                      <span className="text-[#8B5E3C] font-black px-1.5 bg-amber-50 rounded border border-amber-200">
-                                        {occurrence.gemaraWord}
-                                      </span>
-                                      {occurrence.after.slice(0, 5).length > 0 && (
-                                        <span className="opacity-40">
-                                          {" "}{occurrence.after.slice(0, 5).join(" ")}
-                                        </span>
-                                      )}
+                                      {renderOccurrenceContext(occurrence)}
                                     </p>
                                     {occurrence.steinsaltzContext && (
                                       <p
@@ -1282,8 +1452,8 @@ const App = () => {
                                 occurrence.gemaraWord,
                                 selectedDictionaryNikkudWord
                               ) ? (
-                                <span className="text-[9px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200 font-bold uppercase">
-                                  Dictionnaire
+                                <span className="text-[9px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200 font-bold">
+                                  {selectedDictionaryNikkudWord}
                                 </span>
                               ) : null}
                             </div>
@@ -1297,19 +1467,7 @@ const App = () => {
                               className="text-right font-serif text-lg leading-loose"
                               dir="rtl"
                             >
-                              {occurrence.before.slice(-5).length > 0 && (
-                                <span className="opacity-40">
-                                  {occurrence.before.slice(-5).join(" ")}{" "}
-                                </span>
-                              )}
-                              <span className="text-[#8B5E3C] font-black px-1.5 bg-amber-50 rounded border border-amber-200">
-                                {occurrence.gemaraWord}
-                              </span>
-                              {occurrence.after.slice(0, 5).length > 0 && (
-                                <span className="opacity-40">
-                                  {" "}{occurrence.after.slice(0, 5).join(" ")}
-                                </span>
-                              )}
+                              {renderOccurrenceContext(occurrence)}
                             </p>
                             {occurrence.steinsaltzContext && (
                               <p
