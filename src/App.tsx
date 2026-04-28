@@ -37,6 +37,7 @@ const EMPTY_AI_VERIFICATION: AIVerification = {
   corrected_nikkud_word: null,
   notes: "",
   pages_same_meaning: [],
+  needs_ai_rerun: false,
   model_used: null,
   failed_raw_ai_response: "",
   failed_raw_ai_model: null,
@@ -114,7 +115,8 @@ const getImportedStatus = (entry: WordEntry): WordEntry["_status"] => {
 };
 
 const isEntryAlreadyAnalyzed = (entry: WordEntry): boolean =>
-  getImportedStatus(entry) === "done";
+  getImportedStatus(entry) === "done" &&
+  !normalizeAiVerification(entry.ai_verification).needs_ai_rerun;
 
 const normalizeKeyInputs = (inputs: string[]): string[] => {
   const next = [...inputs];
@@ -530,6 +532,7 @@ const App = () => {
                       ai_verification: {
                         ...normalizeAiVerification(row.ai_verification),
                         ...res,
+                        needs_ai_rerun: false,
                       },
                     }
                   : row
@@ -562,6 +565,7 @@ const App = () => {
                       ai_verification: {
                         ...normalizeAiVerification(row.ai_verification),
                         ...failureDetails,
+                        needs_ai_rerun: normalizeAiVerification(row.ai_verification).needs_ai_rerun,
                       },
                     }
                   : row
@@ -1004,7 +1008,14 @@ const App = () => {
                                   title={getManualStatusOption(entry.manual_status)?.label}
                                 />
                               ) : (
-                                <span className="inline-block w-2 h-2 rounded-full bg-[#D4C3A3]" />
+                                <span
+                                  className={`inline-block rounded-full ${
+                                    entry.ai_verification.needs_ai_rerun
+                                      ? "w-4 h-4 bg-blue-500"
+                                      : "w-2 h-2 bg-[#D4C3A3]"
+                                  }`}
+                                  title={entry.ai_verification.needs_ai_rerun ? "Relance IA demandee" : ""}
+                                />
                               )}
                             </td>
                             <td className="p-3 text-center">
@@ -1160,6 +1171,26 @@ const App = () => {
                         );
                       })}
                     </div>
+                    <button
+                      onClick={() =>
+                        updateSelectedWord((entry) => ({
+                          ...entry,
+                          ai_verification: {
+                            ...normalizeAiVerification(entry.ai_verification),
+                            needs_ai_rerun: !normalizeAiVerification(entry.ai_verification).needs_ai_rerun,
+                          },
+                        }))
+                      }
+                      className={`px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase w-fit ${
+                        selectedWord.ai_verification.needs_ai_rerun
+                          ? "bg-blue-100 text-blue-800 border-blue-200"
+                          : "bg-white text-[#8B5E3C] border-[#D4C3A3]"
+                      }`}
+                    >
+                      {selectedWord.ai_verification.needs_ai_rerun
+                        ? "Relance IA activée"
+                        : "Marquer pour relance IA"}
+                    </button>
                     <textarea
                       value={selectedWord.manual_note || ""}
                       onChange={(e) =>
@@ -1179,11 +1210,16 @@ const App = () => {
                   <div className="p-4 space-y-3">
                     <div className="flex items-center justify-between gap-3 text-[10px] uppercase font-bold text-[#8B5E3C]">
                       <span>Modèle utilisé : {selectedModelUsed || "—"}</span>
-                      {selectedExactMatch !== null && (
-                        <span className={selectedExactMatch ? "text-green-700" : "text-red-700"}>
-                          Même exact ? {selectedExactMatch ? "true" : "false"}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-3">
+                        {selectedWord.ai_verification.needs_ai_rerun ? (
+                          <span className="text-blue-700">Relance IA demandée</span>
+                        ) : null}
+                        {selectedExactMatch !== null && (
+                          <span className={selectedExactMatch ? "text-green-700" : "text-red-700"}>
+                            Même exact ? {selectedExactMatch ? "true" : "false"}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">

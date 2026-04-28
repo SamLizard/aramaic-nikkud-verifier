@@ -36,6 +36,7 @@ export interface AIVerification {
   pages_same_meaning: string[];
   corrected_nikkud_word: string | null;
   notes: string;
+  needs_ai_rerun?: boolean;
   model_used?: string | null;
   failed_raw_ai_response?: string;
   failed_raw_ai_model?: string | null;
