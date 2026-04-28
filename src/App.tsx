@@ -4,7 +4,7 @@ import {
   Loader2, FileUp, Download, Play, Square, Info, CheckCircle2,
   XCircle, Search, BookOpen, Layers, FileJson, X, Key, Eye, EyeOff,
 } from "lucide-react";
-import { verifyWithGemini, generatePrompt, isRateLimitError } from "./lib/gemini";
+import { verifyWithGroq, generatePrompt, isRateLimitError } from "./lib/groq";
 import { WordEntry } from "./types";
 
 const DELAY_BETWEEN_WORDS_MS = 4500;
@@ -91,7 +91,7 @@ const App = () => {
   const handleStartProcess = async () => {
     if (results.length === 0) return;
     if (!apiKey.trim()) {
-      setStatusMsg("⚠️ Entrez votre clé API Gemini d'abord.");
+      setStatusMsg("⚠️ Entrez votre clé API Groq d'abord.");
       return;
     }
 
@@ -128,7 +128,7 @@ const App = () => {
         );
         try {
           const currentEntry = resultsRef.current[i];
-          const res = await verifyWithGemini(currentEntry, apiKey.trim());
+          const res = await verifyWithGroq(currentEntry, apiKey.trim());
           setResults((prev) =>
             prev.map((r, k) =>
               k === i
@@ -145,7 +145,7 @@ const App = () => {
             rateLimitRetries += 1;
             const waitMs = err.retryAfterMs + RATE_LIMIT_BUFFER_MS;
             setStatusMsg(
-              `Quota Gemini atteinte. Pause ${Math.ceil(waitMs / 1000)}s avant reprise (${processedCount + 1}/${total}).`
+              `Quota Groq atteint. Pause ${Math.ceil(waitMs / 1000)}s avant reprise (${processedCount + 1}/${total}).`
             );
             await wait(waitMs);
             continue;
@@ -233,12 +233,12 @@ const App = () => {
             {/* API Key */}
             <section className="bg-white/40 border border-[#C4A35A]/30 rounded-lg p-5 shadow-sm">
               <h2 className="font-serif text-sm font-bold mb-3 flex items-center gap-2 text-[#8B5E3C]">
-                <Key className="w-3.5 h-3.5" /> Clé API Gemini
+                <Key className="w-3.5 h-3.5" /> Clé API Groq
               </h2>
               <div className="relative">
                 <input
                   type={showKey ? "text" : "password"}
-                  placeholder="AIza..."
+                  placeholder="gsk_..."
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   className="w-full pr-8 py-2 px-3 rounded border border-[#D4C3A3] text-xs font-mono bg-white focus:outline-none focus:border-[#C4A35A]"
@@ -255,7 +255,7 @@ const App = () => {
                 </button>
               </div>
               <p className="text-[9px] opacity-35 mt-1.5">
-                Votre clé n'est envoyée qu'à Google.
+                Votre clé n'est envoyée qu'à Groq.
               </p>
             </section>
 

@@ -7,54 +7,33 @@ interface VerificationResult {
   notes: string;
 }
 
-interface GeminiModel {
-  name?: string;
-  supportedGenerationMethods?: string[];
-}
-
-interface GeminiListModelsResponse {
-  models?: GeminiModel[];
-}
-
-interface GeminiGenerateContentResponse {
-  candidates?: Array<{
-    content?: {
-      parts?: Array<{
-        text?: string;
-      }>;
+interface GroqChatCompletionResponse {
+  choices?: Array<{
+    message?: {
+      content?: string | null;
     };
   }>;
 }
 
-class GeminiRateLimitError extends Error {
+class GroqRateLimitError extends Error {
   retryAfterMs: number;
 
   constructor(message: string, retryAfterMs: number) {
     super(message);
-    this.name = "GeminiRateLimitError";
+    this.name = "GroqRateLimitError";
     this.retryAfterMs = retryAfterMs;
   }
 }
 
-const GEMINI_API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
-const PREFERRED_MODEL_NAMES = [
-  "gemini-2.5-flash-lite",
-  "gemini-2.0-flash-lite",
-  "gemini-2.5-flash",
-  "gemini-2.0-flash",
-  "gemini-1.5-flash",
-];
-const modelNameCache = new Map<string, Promise<string>>();
+const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+const GROQ_MODEL = "openai/gpt-oss-120b";
 const HEBREW_DIACRITICS_REGEX = /[\u0591-\u05BD\u05BF-\u05C7]/g;
-
-const normalizeModelName = (modelName: string): string =>
-  modelName.startsWith("models/") ? modelName : `models/${modelName}`;
 
 const parseApiErrorMessage = async (res: Response): Promise<string> => {
   const err = await res.json().catch(() => ({}));
   return (
     (err as { error?: { message?: string } })?.error?.message ||
-    `Gemini API error: HTTP ${res.status}`
+    `Groq API error: HTTP ${res.status}`
   );
 };
 
@@ -67,7 +46,7 @@ const parseRetryAfterMs = (res: Response, message: string): number => {
     }
   }
 
-  const match = message.match(/Please retry in ([\d.]+)s/i);
+  const match = message.match(/retry in ([\d.]+)s/i);
   if (match) {
     const retryAfterSeconds = Number(match[1]);
     if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
@@ -78,12 +57,8 @@ const parseRetryAfterMs = (res: Response, message: string): number => {
   return 30000;
 };
 
-const isModelNotFoundError = (message: string): boolean =>
-  message.includes("not found") ||
-  message.includes("not supported for generateContent");
-
-const isRateLimitError = (error: unknown): error is GeminiRateLimitError =>
-  error instanceof GeminiRateLimitError;
+const isRateLimitError = (error: unknown): error is GroqRateLimitError =>
+  error instanceof GroqRateLimitError;
 
 const normalizeSurfaceWithoutNikkud = (text: string): string =>
   text.normalize("NFC").replace(HEBREW_DIACRITICS_REGEX, "");
@@ -107,75 +82,62 @@ const buildNotes = (notes: string, extraNote?: string): string => {
   return `${notes} ${extraNote}`;
 };
 
-const fetchAvailableModelName = async (apiKey: string): Promise<string> => {
-  const res = await fetch(`${GEMINI_API_BASE_URL}/models`, {
-    headers: {
-      "x-goog-api-key": apiKey,
-    },
-  });
-
-  if (!res.ok) {
-    return normalizeModelName(PREFERRED_MODEL_NAMES[0]);
-  }
-
-  const data = (await res.json()) as GeminiListModelsResponse;
-  const models = (data.models || []).filter((model) =>
-    (model.supportedGenerationMethods || []).includes("generateContent")
-  );
-
-  const preferredModel = PREFERRED_MODEL_NAMES.map(normalizeModelName).find(
-    (preferredName) =>
-      models.some((model) => normalizeModelName(model.name || "") === preferredName)
-  );
-
-  if (preferredModel) {
-    return preferredModel;
-  }
-
-  const flashModel = models.find((model) =>
-    normalizeModelName(model.name || "").includes("flash")
-  )?.name;
-
-  if (flashModel) {
-    return normalizeModelName(flashModel);
-  }
-
-  return normalizeModelName(models[0]?.name || PREFERRED_MODEL_NAMES[0]);
-};
-
-const getModelName = async (
-  apiKey: string,
-  options?: { forceRefresh?: boolean }
-): Promise<string> => {
-  if (options?.forceRefresh) {
-    modelNameCache.delete(apiKey);
-  }
-
-  const cachedModel = modelNameCache.get(apiKey);
-  if (cachedModel) {
-    return cachedModel;
-  }
-
-  const modelPromise = fetchAvailableModelName(apiKey);
-  modelNameCache.set(apiKey, modelPromise);
-
-  return modelPromise;
-};
-
 const requestVerification = async (
   prompt: string,
-  apiKey: string,
-  modelName: string
-): Promise<GeminiGenerateContentResponse> => {
-  const url = `${GEMINI_API_BASE_URL}/${normalizeModelName(modelName)}:generateContent?key=${apiKey}`;
-  const res = await fetch(url, {
+  apiKey: string
+): Promise<GroqChatCompletionResponse> => {
+  const res = await fetch(GROQ_API_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
     body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        responseMimeType: "application/json",
-        temperature: 0.1,
+      model: GROQ_MODEL,
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.2,
+      max_completion_tokens: 1200,
+      top_p: 1,
+      reasoning_effort: "medium",
+      stream: false,
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "nikkud_verification",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              nikkud_correct: {
+                type: "boolean",
+              },
+              corrected_nikkud_word: {
+                type: "string",
+              },
+              notes: {
+                type: "string",
+              },
+              pages_same_meaning: {
+                type: "array",
+                items: {
+                  type: "string",
+                },
+              },
+            },
+            required: [
+              "nikkud_correct",
+              "corrected_nikkud_word",
+              "notes",
+              "pages_same_meaning",
+            ],
+            additionalProperties: false,
+          },
+        },
       },
     }),
   });
@@ -183,12 +145,12 @@ const requestVerification = async (
   if (!res.ok) {
     const message = await parseApiErrorMessage(res);
     if (res.status === 429) {
-      throw new GeminiRateLimitError(message, parseRetryAfterMs(res, message));
+      throw new GroqRateLimitError(message, parseRetryAfterMs(res, message));
     }
     throw new Error(message);
   }
 
-  return (await res.json()) as GeminiGenerateContentResponse;
+  return (await res.json()) as GroqChatCompletionResponse;
 };
 
 const generatePrompt = (entry: WordEntry): string => {
@@ -242,29 +204,14 @@ Réponds UNIQUEMENT avec cet objet JSON (sans backticks ni texte autour) :
 {"nikkud_correct":boolean,"corrected_nikkud_word":"mot corrigé ou -","notes":"explication grammaticale courte en français","pages_same_meaning":["label1","..."]}`;
 };
 
-// DONE: Uses direct REST call instead of the SDK to avoid the 404 model-not-found error.
-// The SDK sometimes resolves the wrong endpoint depending on the version.
-const verifyWithGemini = async (
+const verifyWithGroq = async (
   entry: WordEntry,
   apiKey: string
 ): Promise<VerificationResult> => {
   const prompt = generatePrompt(entry);
-  let modelName = await getModelName(apiKey);
-  let data: GeminiGenerateContentResponse;
-
-  try {
-    data = await requestVerification(prompt, apiKey, modelName);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (!isModelNotFoundError(message)) {
-      throw error;
-    }
-
-    modelName = await getModelName(apiKey, { forceRefresh: true });
-    data = await requestVerification(prompt, apiKey, modelName);
-  }
-
-  const txt: string = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+  const data = await requestVerification(prompt, apiKey);
+  const rawContent = data.choices?.[0]?.message?.content;
+  const txt = typeof rawContent === "string" ? rawContent : "{}";
   const clean = txt.replace(/```json|```/g, "").trim();
   const p = JSON.parse(clean) as Partial<VerificationResult>;
   const rawCorrectedWord =
@@ -291,6 +238,6 @@ const verifyWithGemini = async (
   };
 };
 
-export { generatePrompt, verifyWithGemini };
-export { GeminiRateLimitError, isRateLimitError };
+export { generatePrompt, verifyWithGroq };
+export { GroqRateLimitError, isRateLimitError };
 export type { VerificationResult };
