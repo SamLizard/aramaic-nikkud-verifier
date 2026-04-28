@@ -211,6 +211,30 @@ const getStatusRank = (status?: WordEntry["_status"]): number => {
   }
 };
 
+const getStatusSortRank = (entry: WordEntry): number => {
+  if (entry._status === "error") {
+    return 0;
+  }
+
+  if (entry._status === "done" && entry.ai_verification.nikkud_correct === false) {
+    return 1;
+  }
+
+  if (entry._status === "processing") {
+    return 2;
+  }
+
+  if (entry._status === "pending") {
+    return 3;
+  }
+
+  if (entry._status === "done" && entry.ai_verification.nikkud_correct === true) {
+    return 4;
+  }
+
+  return 5;
+};
+
 const getTrialTone = (trial: AIVerificationTrial): string => {
   if (trial.status === "success") {
     return "text-green-700 border-green-200 bg-green-50";
@@ -443,8 +467,8 @@ const App = () => {
           rightValue = right.entry.french_meaning;
           break;
         case "status":
-          leftValue = getStatusRank(left.entry._status);
-          rightValue = getStatusRank(right.entry._status);
+          leftValue = getStatusSortRank(left.entry);
+          rightValue = getStatusSortRank(right.entry);
           break;
         case "exact":
           leftValue = getExactMatchFlag(left.entry);

@@ -113,6 +113,14 @@ const parseRetryAfterMs = (res: Response, message: string): number => {
 const isRecoverableStatus = (status: number): boolean =>
   [400, 401, 403, 408, 409, 422, 429].includes(status) || status >= 500;
 
+const isPrimaryJsonValidationFailure = (error: GroqRequestError): boolean =>
+  error.model === PRIMARY_MODEL &&
+  error.status === 400 &&
+  (
+    error.message.toLowerCase().includes("validate json") ||
+    error.message.toLowerCase().includes("failed_generation")
+  );
+
 const isRateLimitError = (error: unknown): error is GroqRateLimitError =>
   error instanceof GroqRateLimitError;
 
@@ -472,12 +480,78 @@ const verifyWithGroq = async (
         }
       }
 
+      if (error instanceof GroqRequestError && isPrimaryJsonValidationFailure(error)) {
+        aiTrials.push({
+          model: error.model,
+          status: "json_validation_error",
+          message: error.message,
+          raw_response: error.message,
+        });
+        latestInvalidJsonFailure = {
+          message: error.message,
+          model: error.model,
+          rawResponse: error.message,
+        };
+
+        try {
+          const fallbackAttempt = await tryModel(
+            entry,
+            apiKey,
+            JSON_FALLBACK_MODEL,
+            "json_object",
+            latestInvalidJsonFailure,
+            aiTrials
+          );
+          aiTrials.push({
+            model: JSON_FALLBACK_MODEL,
+            status: "success",
+            message: "JSON valide reçu.",
+            raw_response: fallbackAttempt.rawContent,
+          });
+          return {
+            ...fallbackAttempt.verification,
+            ai_trials: [...aiTrials],
+          };
+        } catch (fallbackError) {
+          if (fallbackError instanceof GroqInvalidJsonError) {
+            aiTrials.push({
+              model: fallbackError.model,
+              status: "invalid_json",
+              message: fallbackError.message,
+              raw_response: fallbackError.rawResponse,
+            });
+            latestInvalidJsonFailure = {
+              message: fallbackError.message,
+              model: fallbackError.model,
+              rawResponse: fallbackError.rawResponse,
+            };
+            continue;
+          }
+
+          if (
+            fallbackError instanceof GroqRequestError &&
+            isRecoverableStatus(fallbackError.status)
+          ) {
+            aiTrials.push({
+              model: fallbackError.model,
+              status: `api_error_${fallbackError.status}`,
+              message: fallbackError.message,
+              raw_response: fallbackError.message,
+            });
+            lastRecoverableError = fallbackError;
+            continue;
+          }
+
+          throw fallbackError;
+        }
+      }
+
       if (error instanceof GroqRequestError && isRecoverableStatus(error.status)) {
         aiTrials.push({
           model: error.model,
           status: `api_error_${error.status}`,
           message: error.message,
-          raw_response: "",
+          raw_response: error.message,
         });
         lastRecoverableError = error;
         continue;
@@ -501,6 +575,7 @@ const verifyWithGroq = async (
   if (lastRecoverableError instanceof GroqRateLimitError) {
     throw new GroqRateLimitError(
       lastRecoverableError.message,
+      lastRecoverableError.model,
       lastRecoverableError.retryAfterMs
     );
   }
