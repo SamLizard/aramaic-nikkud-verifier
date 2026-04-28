@@ -104,6 +104,16 @@ const normalizeAiVerification = (
   ai_trials: normalizeTrials(verification?.ai_trials),
 });
 
+const coerceBoolean = (value: unknown): boolean =>
+  value === true ||
+  value === "true" ||
+  value === 1 ||
+  value === "1";
+
+const getImportedNeedsAiRerun = (entry: WordEntry): boolean =>
+  coerceBoolean(entry.ai_verification?.needs_ai_rerun) ||
+  coerceBoolean((entry as WordEntry & { needs_ai_rerun?: unknown }).needs_ai_rerun);
+
 const getImportedStatus = (entry: WordEntry): WordEntry["_status"] => {
   const verification = normalizeAiVerification(entry.ai_verification);
   const hasVerdict = verification.nikkud_correct !== null;
@@ -409,7 +419,10 @@ const App = () => {
         const list: WordEntry[] = Array.isArray(raw) ? raw : [raw];
         setResults(
           list.map((entry) => {
-            const aiVerification = normalizeAiVerification(entry.ai_verification);
+            const aiVerification = {
+              ...normalizeAiVerification(entry.ai_verification),
+              needs_ai_rerun: getImportedNeedsAiRerun(entry),
+            };
             return {
               ...entry,
               ai_verification: aiVerification,
