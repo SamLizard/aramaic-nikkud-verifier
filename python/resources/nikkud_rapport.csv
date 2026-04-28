@@ -1,0 +1,271 @@
+﻿Mot (Nikkud),Dictionnaire,Sens (Attendu),Correct?,Meme exact?,Correction,Modele,Statut manuel,Note manuelle,Notes
+אֲבָל,אֶבְלֵיהּ (מועד קטן כא א)   - אֶבְלוֹ,Mais,✓,-,-,,,,"אֲבָל avec sheva sous aleph et kamatz sous bet est la forme usuelle signifiant « mais » en araméen babylonien, confirmée par les trois occurrences citées"
+אַדְּהָכִי וְהָכִי,אַדְּהָכִי - עַד כֹּה; בֵּינָתַיִם,Entre-temps,✗,true,אַדְּהָכִי וְהָכִי,openai/gpt-oss-120b,,,"L'aramaïque «אַדְּהָכִי» (avec dagesh au ד, sheva, kamatz, hiriq) signifie «entre‑temps»; la conjonction «וְ» porte un sheva."
+אַדְּרַבָּה,אַדְּרַבָּה - גְּדוֹלָה מִזּוֹ; לְהֵיפֶךְ,Au contraire,✓,-,-,,,,"Vocalisation conforme à l’usage araméen «אדרבה» signifiant «au contraire», dagesh et shva correctement placés."
+אוּמָה,,Une nation,✓,-,-,,,,אומה signifie «nation» ; la vocalisation ouk shuruk + kamatz est correcte.
+אוּמוֹת הָעוֹלָם,,Les nations du monde,✓,-,-,openai/gpt-oss-120b,,,"Vocalisation correcte : oumôt (אוּמוֹת) avec shuruk sous aleph, cholam sous mem, kamatz sous tav, dagesh dans le mem, correspondant au sens « les nations du monde »."
+אוּרְתָא,אוּרְתָא - תְּחִילַת הַלַּיְלָה,Le soir,✓,-,-,,,,"La vocalisation ouּרְתָא (shuruk sous ו, sheva sous ר, kamatz sous ת) correspond à la forme araméenne signifiant «le soir», conforme aux sources talmudiques."
+אֶחָד… וְאֶחָד,אֲחַד (עבודה זרה ע א)   - סָגַר,Que se soit… et que se soit,✓,-,-,,,,"Vocalisation correcte : אֶחָד (segol sous א, patach sous ח) et וְאֶחָד (sheva sous ו, segol sous א, patach sous ח)."
+אֲחוּהָ,אֲחוֹהּ (בבא בתרא קנא א)   - אֶחָיו (=אֲחוֹהִי),Frère de,✗,false,אֲחוּהּ,,good,,"La forme araméenne «אֲחוּהּ» (patach sous א, shuruk sous ו, hé final avec dagesh) signifie «frère de»; le kamatz final «אֲחוּהָ» est incorrect."
+אַחֵר,אחר - אחר,Autre/surnom d’Elisha ben Avouya,✓,-,-,,,,Vocalisation correcte du mot araméen 'אחר' signifiant 'autre' (nom d'Elisha ben Avouya)
+אַחַר,אחר - אחר,Après,✓,-,-,,,,"En araméen babylonien, le sens « après » s’écrit אַחַר (patah sous ח); אַחֵר signifie « autre »."
+אַחֲרִינָא,אַחֲרִינָא - אַחֵר,Autre,✓,-,-,,,,"Vocalisation correcte, correspond à « autre » dans le Talmud babylonien"
+אַחַת,אחת ואפטר - אחת ואפטר,Que se soit/une,✓,-,-,,,,Vocalisation correcte pour le sens «une fois» en araméen babylonien.
+אַחַת… וְאַחַת,אחת ואפטר - אחת ואפטר,Que se soit… et que se soit,✓,-,-,,,,"Vocalisation correcte : אַחַת … וְאַחַת, forme araméenne féminine de « un » employée au sens « que ce soit… et que ce soit »."
+אֲחָתֵיהּ,אֲחָתֵיהּ - אֲחוֹתוֹ,La sœur de …/sa sœur,✓,-,-,,,,"Vocalisation correcte : sheva sous א, patach sous ח, tzéré sous ת, dagesh dans ה final, correspondant à « sa sœur » en araméen."
+אַטּוּ,אַטּוּ - כְּלוּם?; מִשׁוּם,À cause/est-ce que,✓,-,-,,,,Vocalisation correcte pour le sens « à cause » (mishum)
+אִי,אִי - אִם; אִלּוּ; אִלְמָלֵא,Si/ne pas (négation),✓,-,-,,,,"אִי correctement vocalisé avec hiriq sous aleph, signifiant « si » en araméen babylonien"
+אִי נַמֵי,אִי נַמֵי - אוֹ גַם,Voir aussi,✓,-,-,openai/gpt-oss-120b,good,,Vocalisation correcte pour le sens "voir aussi" (אִי נַמֵי = "également")
+אִי אָמַרְתָּ,אִי - אִם; אִלּוּ; אִלְמָלֵא,Si tu dis,✗,false,אִי אָמַרְתְּ,qwen/qwen3-32b,,,"Le mot 'אמרת' doit se terminer par une ת סופית (תְּ) avec patakh, non une ת עם דגש (תָּ). La forme avec ת סופית est confirmée dans tous les contextes de la Guemara."
+אִי אֶפְשָׁר,אִי - אִם; אִלּוּ; אִלְמָלֵא,Ce n'est pas possible,✓,-,-,openai/gpt-oss-120b,,,"Vocalisation correcte : אִי (hiriq sous aleph) + אֶפְשָׁר (segol sous aleph, dagesh dans פ, shin avec point)."
+אִי בָּעֵית אֵימָא,אי בעית אימא - אִם רְצוֹנְךָ אֱמֹר,Si tu veux je te dirais,✗,-,-,qwen/qwen3-32b,,,"Le mot commence par 'אם' (אם = 'si') avec patach, pas 'אי' (אי = 'non'). La vocalisation correcte est 'אם בעית אימא' (אם = si, בעית = veux, אימא = dis) selon les occurrences dans la Guemara. Correction IA rejetee car elle modifie le texte arameen au lieu du seul nikkud."
+אִי הָכִי,אִי הָכִי - אִם כֵּן; אִם כָּךְ,Si c'est ainsi,✓,-,-,openai/gpt-oss-120b,,,"Vocalisation correcte : אִי avec hiriq, הָכִי avec kamatz sous ה et hiriq sous כּ, correspondant à « si c’est ainsi »."
+אִי לֵימָא,אִי - אִם; אִלּוּ; אִלְמָלֵא,Si tu dis,✗,false,אִי לִימָא,openai/gpt-oss-120b,,,"אִי = particule conditionnelle « si », לִימָא = forme araméenne « si l’on dit », le tsere sous ל doit être un hiriq (לִימָא) pour le sens visé"
+אִי נַמֵי,אִי נַמֵי - אוֹ גַם,Ou alors,✗,false,אִי נָמִי,openai/gpt-oss-120b,need_more_sources,,"Le mot נמי se vocalise généralement נָמִי (kamatz sous נ, hiriq sous מ) signifiant ""également"", la forme נַמֵי n’est pas attestée pour ce sens."
+אִיבָּעְיָא לְהוֹ,אִיבָּעְיָא לְהוֹ - נִשְׁאֲלָה לָהֶם,On (leur) a demandé,✓,-,-,openai/gpt-oss-120b,,,"Vocalisation conforme à la forme אִיבָּעְיָא לְהוֹ (infinitif avec préposition לְ), shva, dagesh et qamatz correctement placés pour le sens « on (leur) a demandé »."
+אִיבָעֵית אֵימָא,אִיבָעֵית אֵימָא - אִם נַפְשְׁךָ אֱמֹר,Si tu veux je te dirais,✗,false,אִיבָּעֵית אֵימָא,openai/gpt-oss-120b,,,Le bet doit porter un dagesh (אִיבָּעֵית) comme attesté dans les passages cités; la forme sans dagesh n’est pas utilisée pour ce sens.
+אִיגַּלַּאי מִילְּתָא,אִיגַּלַּאי מִילְּתָא - נִתְגַּלְגֵּל הַדָּבָר,Il s’est avéré,✓,-,-,openai/gpt-oss-120b,,,"Vocalisation conforme au dictionnaire et aux occurrences talmudiques, le mot signifie « il s’est avéré »."
+אִידִי וְאִידִי,אִידִי וְאִידִי - כַּאן וְכַאן; זֶה וָזֶה; זוֹ וָזוֹ; אֵלּוּ וָאֵלּוּ,Et l’un et l’autre,✗,false,אִידֵּי וְאִידֵּי,openai/gpt-oss-120b,,,"Le mot s’écrit avec dagesh et segol sur ד (אִידֵּי), signifiant « l’un et l’autre » en araméen babylonien."
+אִידָךְ,אִידָךְ - הַשֵּׁנִי; הָאַחֵר; הָאַחֶרֶת,L’autre,✗,false,אִידַּךְ,,,,"Le mot araméen «אִידַּךְ» signifie «l’autre»; il s’écrit avec dagesh au ד et patach, pas qamatz, donc la vocalisation étudiante est incorrecte."
+אַיְידֵי,אַיְידֵי - עַל יְדֵי; בִּשְׁבִיל,Puisque,✓,-,-,,,,"Vocalisation conforme au dictionnaire : aleph‑patah, yod‑shva, dalet‑tzere‑yod, signifiant « par », « au moyen de » (≈ « puisque »)"
+אָיְירֵי,אָיְירֵי - עוֹסֵק; דָּן,Il s’agit,✗,false,אַיְירִי,openai/gpt-oss-120b,,,"Le nikkud correct est patach sous א, sheva sous י et hiriq sous ר, comme attesté dans la Guemara; la forme étudiante utilise qamatz et segol, ce qui est erroné."
+אַיְיתֵּי,אַיְיתֵּי - הֵבִיא; אָבִיא; הָבֵא; הֵבִיאָה,Il a amené,✗,false,אַיְיתִי,,,,"Le verbe araméen 'אייתי' signifie 'il a amené'; la forme correcte est אַיְיתִי (patach sous א, sheva sous י, tav sans dagesh, hiriq sous ת)."
+אִיכָּא,אִיכָּא - יֵשׁ כַּאן; יֵשׁ,il y a,✓,-,-,,,,"Vocalisation correcte : chirik sous aleph, dagesh et kamatz sous kaf, forme araméenne 'אִיכָּא' signifiant 'il y a'."
+אִיכָּא דְאָמְרֵי,אִיכָּא דְאָמְרֵי - יֵשׁ אוֹמְרִים,il y en a qui disent (autrement),✓,-,-,openai/gpt-oss-120b,,,"אִיכָּא = adverbe d'existence, dְאָמְרֵי = locution signifiant « il y en a qui disent », la vocalisation correspond aux sources talmudiques."
+אִיכַּסִּיף,אִיכַּסִּיף - נִתְבַּיֵּשׁ,il a eu honte,✗,false,אִיכְּסִיף,,,,"Le nikkud correct est אִיכְּסִיף : hiriq sous aleph, dagesh au kaf suivi d’un shva, pas de dagesh au ס et pas de patach. Le student a mis patach et dagesh sur ס, ce qui est erroné."
+אִילֵימָא,אִילֵימָא - אִם נֹאמַר,si tu dis,✓,-,-,,,,"Vocalisation correcte pour le sens si tu dis, forme araméenne אִילֵימָא"
+אֵימָא,אִימָּא - הָאֵם; אֵם; אִמִּי,tu n'as qu'à dire,✗,false,אִימָּא,,,,"Le mot araméen «אִימָּא» signifie «tu n’as qu’à dire»; la vocalisation correcte est hiriq sous aleph, dagesh dans le mem et kamatz sous le mem"
+אִימָּא,אִימָּא - הָאֵם; אֵם; אִמִּי,la mère de,✓,-,-,,,,"Forme אִימָּא avec hiriq sous aleph, dagesh et kamatz sous mem correspond au sens «la mère de» d'après le dictionnaire; la variante avec tzere (אֵימָא) existe mais n'est pas requise ici"
+אִין,אִין - אין; הֵן; כֵּן,oui/ on ne ... pas (forme de négation),✓,-,-,,,,Vocalisation correcte pour le sens négatif araméen «אין»
+אִין הָכִי נַמֵּי,אִין הָכִי נַמֵּי - הֵן כַּךְ הוּא,effectivement,✗,false,אִין הָכִי נָמֵי,openai/gpt-oss-120b,,,"Le nikkud correct est nun kamatz, mem sans dagesh, tzéré; la forme signifie «effectivement»."
+אִינִי,אִינִי - כַּךְ הִיא?,vraiment?!,✓,-,-,,,,"אִינִי (aleph + hiriq, nun + hiriq, yod) est la particule araméenne signifiant « vraiment ? », distincte de אִינִּי « je suis ». Aucun des passages cités n’utilise cette forme avec ce sens."
+אֵינִי,אִינִי - כַּךְ הִיא?,je ne ... pas,✓,-,-,,,,"«אֵינִי» est la forme araméenne attestée signifiant «je ne suis pas», le segol sous aleph est fréquent dans la Guemara (Berakhot d'א)."
+אֱינִישׁ,אֱינִישׁ - אָדָם,un homme/une personne,✗,false,אִינִישׁ,,need_more_sources,,"Le mot araméen «אִינִישׁ» s’écrit avec un hiriq sous l’alef, pas un hataf segol ; la forme donnée «אֱינִישׁ» est donc incorrecte."
+אֱינָשֵׁי,אֱינָשֵׁי - בְּנֵי אָדָם,les gens,✗,false,אִינְשֵׁי,,,,"Le mot araméen « אִינְשֵׁי » (people) s’écrit avec hiriq sous aleph, shva sous nun et tzéré sous shin ; la forme donnée « אֱינָשֵׁי » utilise un segol et un kamatz incorrects."
+אִיסּוּרָא,אִיסּוּרָא - אִסּוּר,un interdit/nom d'un sage/nom petite pièce de bronze,✓,-,-,,,,"Vocalisation correcte : aleph avec hiriq, samekh avec dagesh et shuruk, resh avec kamatz, correspond à « איסורא » signifiant interdiction ou nom propre."
+אִיפְּכָא,אִיפְּכָא - הֵפֶךְ; חִלּוּף,l'inverse,✓,-,-,,,,"Vocalisation correcte pour le sens « l'inverse » (héfékh, retournement)"
+אִיפְּכָא מִסְתַּבְּרָא,אִיפְּכָא מִסְתַּבְּרָא - מִסְתַּבֵּר חִלּוּף,c'est l'inverse qui est logique,✓,-,-,openai/gpt-oss-120b,,,"Nikkud correct : אִיפְּכָא מִסְתַּבְּרָא correspond à l'expression idiomatique « c’est l’inverse qui est logique », avec hiriq, shva, dagesh et kamatz correctement placés."
+אִיתָא,אִיתָא - יֶשְנָהּ,il y a,✓,-,-,,,,"Vocalisation correcte : aleph avec hiriq, tav avec kamatz, correspondant au sens « il y a » en araméen babylonien."
+אִיתַּמּר,אִיתַּמַּר - הוּמַר,il a été dit,✗,false,אִיתְּמַר,,,,"Le verbe araméen 'אמר' au parfait 3ms s’écrit אִתְּמַר avec shva sous le tav et patach sous le mem, signifiant « il a été dit »."
+אִיתְּתָא,אִיתְּתָא - אִשָּה,une femme,✓,-,-,,,,"Vocalisation conforme au dictionnaire et aux occurrences talmudiques, avec hiriq sous א, shva sous תּ, kamatz sous תָא, indiquant le sens « femme »."
+אִכַּסִּיף,אִכַּסִּיף - נִתְבַּיֵּשׁ,il a eu honte,✗,false,אִכְּסִיף,,,,"Le verbe araméen «אִכְּסִיף» (être honteux) s’écrit avec sheva sous le kaf et sans dagesh au samekh, comme le montrent les citations talmudiques."
+אַל תִּקְרֵי,אל תתרגם - אל תתרגם,"ne lis pas (ainsi..., mais..)",✓,-,-,openai/gpt-oss-120b,,,Vocalisation correcte : אַל תִקְרֵי (impératif négatif féminin)
+אִלָּא,אלא - אלא,seulement,✓,-,-,,,,"אִלָּא est la forme araméenne signifiant « seulement » avec hiriq sous aleph initial et kamatz sous le לּ, conforme aux règles de vocalisation."
+אלוּ,אַלְוָא - אַלְוָא (מין עשב מר כלענה),voici,✗,false,אֵלּוּ,,,,"Le mot araméen 'אלו' signifiant «voici» se vocalise habituellement 'אֵלּוּ' (segol sous aleph, dagesh dans ל, shuruk sous ו)."
+אֵלּוּ,אַלְוָא - אַלְוָא (מין עשב מר כלענה),ceux-là,✓,-,-,,,,"אֵלּוּ est la forme démonstrative «ceux‑là» avec segol sous א, dagesh au ל et shuruk au ו, conforme à l’usage talmudique"
+אַלִּיבָּא,אַלִּיבָּא - לְדַעַת (=על לב),selon,✓,-,-,,,,Vocalisation correcte pour le sens 'selon' (araméen aliba).
+אַלְמָא,אַלְמָא - הֲרֵי שׁ,donc,✓,-,-,,,,"Vocalisation correcte : אַלְמָא (patach, shva, kamatz) correspond à la conjonction « donc » en araméen babylonien."
+אַלָּמָה,אַלָּמָה - לָמָּה,alors pourquoi,✗,false,אַלְּמָה,,,,"Le mot araméen « אלמא » (alors pourquoi) s’écrit avec patach sous aleph, dagesh + sheva sous le lamed, kamatz sous le mem et le heh."
+אִלְמָלֵא,,s'il n'y avait pas eu...,✓,-,-,,,,"Vocalisation conforme à l’usage araméen du terme « אִלְמָלֵא » signifiant « si ce n’était pas », avec hiriq sous א, sheva sous ל, kamatz sous מ, segol sous ל"
+אִלְמָלֵי,,sil y avait eu,✗,false,אָמַר קְרָא,,,,"Le verbe araméen אמר se vocalise habituellement אָמַר ; le hataf pataḥ (אֲ) est inapproprié ici, il faut kamatz (אָ)."
+אִם כֵּן,אִם כֵּן מַאי אַסָהֲדוּתֵיהּ - אִם כֵּן מַה (הוֹעִילָה) הַעְדָּאָתוֹ (=עֵדוּתוֹ),si c'est ainsi,✓,-,-,openai/gpt-oss-120b,,,"Vocalisation correcte : אִם avec hiriq, mem avec sheva, כֵּן avec dagesh, tzere, nun, correspondant au sens « si c’est ainsi »."
+אִם תִּמְצָא לוֹמַר,אִם אִיתָא (שבת נט ב)   - אִם יֶשְׁנָהּ,Si tu vas dire (répondre),✓,-,-,openai/gpt-oss-120b,,,"Vocalisation conforme à l'usage talmudique : אם avec hiriq, תמצא au futur masculin singulier, ולומר avec cholam et patach."
+אַמַּאי,אַמַּאי - לָמָּה,pourquoi,✓,-,-,,,,Vocalisation conforme à la forme araméenne standard « אַמַּאי » signifiant « pourquoi »
+אֲמַר לֵיהּ,אֲמַר - אָמַר,il lui a dit,✓,-,-,openai/gpt-oss-120b,,,"Vocalisation conforme à l'araméen babylonien : אמר = אֲמַר, ליה = לֵיהּ, signifiant « il lui a dit »."
+אֲמַר מַר,אֲמַר מַר - אָמַר מַר (פתיחה להבאה ממשנה או ברייתא או מדברי אמורא),notre maître a dit/rav (intel) a dit,✗,false,אָמַר מַר,openai/gpt-oss-120b,,,En araméen babylonien le verbe «אמר» s’écrit vocalisé אָמַר (qamatz sous א) ; la forme avec shva (אֲמַר) est incorrecte pour le sens «le maître a dit».
+אֲמַר קְרָא,אֲמַר קְרָא - אָמַר הַכָּתוּב,le verset a dit,✓,-,-,openai/gpt-oss-120b,,,Nikkud correct: אֲמַר קְרָא correspond à 'le verset a dit'.
+אָמְרִי,אֲמַרִי - אָמַרְתִּי,on a dit,✗,false,אֲמַרִי,,,,"Le verbe araméen «אמרי» signifiant «on a dit» se vocalise «אֲמַרִי» (sheva sous א, patach sous מ, chirik sous ר). La forme «אָמְרִי» est incorrecte."
+אַמָּה,אִמָּהָתָא - אִמָּהוֹת,1 servante,✗,false,אִמָּה,,,,"Le mot araméen «אִמָּה» signifie «servante»; la vocalisation correcte est hiriq sous aleph, pas patach."
+אַמָּה,אִמָּהָתָא - אִמָּהוֹת,1 coudée,✓,-,-,,,,"Nikkud correct pour ""her mother"" : aleph hiriq, mem dagesh avec kamatz, heh mappiq, correspondant au sens ""sa mère""."
+אִמָּהּ,אִמָּהָתָא - אִמָּהוֹת,sa mère,✓,-,-,,,,"Nikkud correct : aleph with hiriq, mem with dagesh, kamatz, final heh with mappiq, correspondant à « sa mère »."
+אֲנָא,אֲנָא - אֲנִי,moi/je,✓,-,-,,,,Vocalisation correcte : אֲנָא signifie « je » en araméen babylonien.
+אֲנַן,אֲנַן - אָנוּ,nous/1er forme du pluriel,✓,-,-,,,,Vocalisation correcte du pronom araméen « אנן » signifiant « nous ».
+אָסוּר,אַסוּר - אסור; קָשְׁרוּ,interdit,✓,-,-,,,,"Vocalisation correcte : aleph kamatz, samekh sans dagesh, vav shur, resh sans voyelle."
+אַסוּר,אַסוּר - אסור; קָשְׁרוּ,lié,✓,-,-,,,,"Nikkud correct : aleph avec patach, vav avec shuruk, forme araméenne participiale signifiant « lié »."
+אָסוּר,אַסוּר - אסור; קָשְׁרוּ,je me détourne,✗,false,אַסוּר,,,,"Le verbe araméen אסור « se détourner » se vocalise avec patach sous א (אַסוּר), pas kamatz (אָסוּר)."
+אַף,אף על - אף על,même/colère/le nez/ange maléfique,✓,-,-,,,,"Le nikkud patach sous א et absence de voyelle sur פ correspond à la forme araméenne «אַף» signifiant «même, même si, le nez», conforme au sens visé."
+אַף עַל גַּב,אַף עַל גַּב - אַף עַל פִּי,bien que,✓,-,-,openai/gpt-oss-120b,,,Vocalisation correcte pour l'expression idiomatique "אַף עַל גַּב" signifiant "bien que"
+אַף עַל פִּי,אף על - אף על,bien que,✓,-,-,openai/gpt-oss-120b,,,Vocalisation conforme à l'usage hébreu/araméen pour la locution signifiant « bien que »
+אַף עַל פִּי כֵן,אף על - אף על,malgré cela,✓,-,-,openai/gpt-oss-120b,,,"Vocalisation conforme aux occurrences talmudiques, signifiant «malgré cela»."
+אֲפִילּוּ,אַפִּילוּ (חולין נט ב)   - אפילו; הִפִּילוּ,même,✗,false,אֲפִילוּ,,,,"Le mot araméen «אפילו» s’écrit avec shva sous aleph, hiriq sous פ, et shuruk sous ל, sans dagesh; la forme donnée correspond au sens «même»."
+אֲפַכוּהּ,אֲפַכוּהּ (גיטין לה א)   - הִפְכוּהוּ; הֲפָכוּהוּ,ils ont inversé (l’enseignement),✗,false,אַפְכוּהָ,,,,"L'aleph porte un patach, le pe un sheva, le kaf avec dagesh et shuruk, le he final un kamatz (forme verbale « ils ont inversé »)."
+אֶפְשָׁר,,c'est possible/est-ce possible que…,✗,false,אִפְשָׁר,,,,Le mot araméen « אפשר » s’écrit avec un hiriq sous l’alef (אִ) et non un segol (אֶ) ; il signifie « c’est possible » dans le Talmud babylonien.
+אֵצֶל,אַצְּלָה (עבודה זרה מא ב)   - הִצִּילָה,chez/auprès de,✓,-,-,,,,"Forme araméenne 'אצל' signifiant 'près de' se vocalise habituellement אֵצֶל dans le Talmud babylonien, conforme aux citations"
+אַרְבַּע,אַרְבַּע מְאָה - אַרְבַּע מֵאוֹת,quatre,✓,-,-,,,,"Vocalisation correcte : aleph avec patach, resh avec sheva, bet avec dagesh et patach, ayin muet, correspondant au sens « quatre » en araméen"
+אַרְעָא,אַרְעָא - אֶרֶץ; קַרְקַע,une terre/la terre,✓,-,-,,,,Vocalisation correcte pour le sens 'terre' (אַרְעָא).
+אַשְׁמוֹעִינַן,,on nous a fait entendre (appris),✗,false,אַשְׁמוֹעִינַן,,,,"Le shin porte un dagesh dans cette forme araméenne (אַשְׁמוֹעִינַן) ; la vocalisation est patach‑א, sheva‑שׁ, holam‑ו, hiriq‑ע, patach‑נ, correspondant au sens « on nous a fait entendre »."
+אֲתָא,אֲתָא - בָּא,il est venu,✓,-,-,,,,"Vocalisation correcte : aleph avec sheva, tav avec kamatz, aleph final sans nikkud, correspondant au sens « il est venu »."
+אֲתוּ לְקַמֵּיהּ,אֱתוֹ - בּוֹאוּ,ils sont venus devant (intel/lui),✗,false,אֲתוֹ לְקַמֵּיהּ,openai/gpt-oss-120b,,,"Le nikkud correct est אֲתוֹ (patach sous aleph, holam sous tav) et le dagesh doit précéder le segol dans קַמֵּיהּ"
+אַתְיָא,אָתְיָא - בָּאָה,on l'apprend/on l'amène/il est venu,✗,false,אָתְיָא,,,,"Le aleph porte un kamatz (אָ) et non un patach (אַ) dans le verbe araméen « אתיא » signifiant « il est venu », comme le montrent les occurrences talmudiques."
+אִתְּמַר,אִתְּמַר - נֶאֱמַר,il a été dit,✓,-,-,,,,"Vocalisation correcte : aleph avec hiriq, tav avec dagesh, shva, mem avec patach, resh, correspondant à « il a été dit » en araméen."
+אַתְרָא,אַתְרָא - מָקוֹם,un endroit,✓,-,-,,,,"Vocalisation correcte : אַתְרָא correspond à « מקום », confirmé par le dictionnaire et les occurrences du Talmud."
+בְּהָא,,dans ça,✓,-,-,,,,"Correct: בְּהָא = 'in this' (sheva under bet, kamatz under he, aleph silent) correspond au sens français 'dans ça'."
+בְּהֶדְיָא,בְּהֶדְיָא - בְּפֵרוּשׁ; בְּגָלוּי,clairement/explicitement,✓,-,-,,,,"Vocalisation correcte : בְּהֶדְיָא signifie « explicitement », conforme au dictionnaire et aux occurrences du Talmud."
+בֵּית הַכִּסֵּא,בִּית (עירובין נב א)   - לִין,des toilettes,✓,-,-,qwen/qwen3-32b,,,La vocalisation étudiante correspond exactement aux occurrences dans la Guemara (בֵּית הַכִּסֵּא) pour le sens de 'toilettes'.
+בַּמֶּה דְּבָרִים אֲמוּרִים,,de quel cas s’agit-il,✓,-,-,openai/gpt-oss-120b,,,"Le nikkud correspond à la forme araméenne «בַּמֶּה דְּבָרִים אֲמוּרִים», qui signifie «de quel cas s’agit‑il»."
+בְּמַאי עֲסִיקִינַן,בְּמַאי - בַּמֶּה,de quoi on s’occupe (on parle),✗,false,בְּמַאי עֲסִיקִינָן,openai/gpt-oss-120b,,,Le mot «עסיקינן» se vocalise avec kamatz sous le נ final (…ִינָן) et non patach ; la forme donnée corrige ce point tout en conservant les consonnes.
+בְּעֵי,בְּעֵי (בבא קמא נט ב)   - שְׁאַל,Il a demandé,✓,-,-,,,,"Le nikkud בְּעֵי (sheva sous le bet, tzéré sous l'ayin) correspond au verbe 'שאל' signifiant 'il a demandé'"
+בְּעַי,בְּעֵי (בבא קמא נט ב)   - שְׁאַל,il veut,✗,false,בְּעֵי,,,,"Le verbe araméen «בְּעֵי» signifie «il veut»; la vocalisation correcte est sheva sous le bet et tzéré sous lʿayin, pas patach."
+בָּעֵי,בְּעֵי (בבא קמא נט ב)   - שְׁאַל,il a besoin,✗,false,בְּעֵי,,,,"Le verbe araméen «בְּעֵי» signifie «il a besoin» ; il s’écrit avec un sheva sous le bet, pas un kamatz."
+בְּעִי מִינֵּיהּ,בְּעֵי (בבא קמא נט ב)   - שְׁאַל,on lui a demandé,✗,false,בְּעֵי מִינֵּיהּ,openai/gpt-oss-120b,,,"Le mot בְּעֵי s’écrit avec tzéré sous עין; la forme donnée utilise hiriq, donc incorrecte pour le sens «on lui a demandé»."
+בְּעִידָּנָא,,au moment,✓,-,-,,,,"Le nikkud בְּעִדָּנָא (b'iddāna) correspond bien au sens « au moment », dagesh sur ב et ד indique la consonne forte, shva et hiriq corrects."
+בַּעַל,בְּעַל (כתובות ו ב)   - בָּעַל,le propriétaire/mari/il a eu une relation,✗,false,בְּעַל,,,,En araméen babylonien le mot בעל se vocalise généralement avec sheva sous le bet (בְּעַל) pour le sens de propriétaire/mari.
+בְּעָלְמָא,בְּעָלְמָא הָדֵין (קידושין פא א)   - בָּעוֹלָם הַזֶּה,simplement/en général,✓,-,-,,,,"Vocalisation conforme à l’usage araméen «בְּעָלְמָא» = «dans le monde, généralement», dagueh, sheva et kamatz correctement placés"
+בַּר,בַּר - בֵּן; רְשׁוּת; חוּץ,fils delà l'extérieur,✓,-,-,,,,"Le nikkud בַּר (bet avec dagesh, patach, resh) correspond au sens «fils» en araméen, usage confirmé dans les passages cités."
+בְּרֵיהּ,בְּרֵיהּ - בְּנוֹ,son fils/fils de,✓,-,-,,,,"Vocalisation correcte, correspond à « son fils » en araméen"
+בִּשְׁלָמָא,בִּשְׁלָמָא - בְּשָׁלוֹם,ça va bien (dans ce cas/selon),✓,-,-,,,,"Vocalisation correcte : בִּשְׁלָמָא (bet dagesh + chirik, shin shva, lamed kamatz, aleph) correspond à l'araméen « b'shlama » = « ça va bien, en paix »."
+בָּתְרָא,בָּתְרָא - אַחֲרוֹן,dernier,✓,-,-,,,,"Le nikkud בָּתְרָא (dagesh au bet, patach, shva, kamatz) correspond bien au sens « dernier » tel que indiqué dans le dictionnaire et les passages cités."
+גַּבְרָא,גַּבְרָא - אִישׁ,un homme/mari,✓,-,-,,,,Vocalisation correcte pour le sens « homme/mari » en araméen babylonien.
+גּוּפָא,גּוּפָא - גוּף; עַצְמָהּ; גּוּפַהּ,on reprend un enseignement déjà-dit/elle-même/soi-même/corps/essence de,✓,-,-,,,,"Le dagesh sur גּ, le shuruk sur וּ et le kamatz sur פָ sont corrects pour le sens «corps, essence» en araméen babylonien."
+גְּזַלַן,גְּזַלַן (ראש השנה כו ב)   - גְּזָלַנִי,un voleur (qui vole publiquement),✓,-,-,,,,"Vocalisation correcte : גְּזַלַן avec dagesh, sheva et patach, correspondant au sens « voleur public »."
+גְּזֵירָה,,un décret,✓,-,-,,,,"Vocalisation conforme aux éditions du Talmud (gimel dagesh, sheva, tzere, kamatz) pour le sens « décret »."
+גְּזֵרָה,,un décret,✓,-,-,,,,"La vocalisation «גְּזֵרָה» (gimel dagesh, sheva, zayin tzere, resh kamatz, he) correspond bien à l'araméen «gzeirah» signifiant «décret»."
+גָּזְרָה,,elle a coupé,✗,false,גְּזֵרָה,,,,"Le verbe araméen 'גזיר' au passé féminin singulier s’écrit גְּזֵרָה (sheva sous גּ, tzéré sous ז, kamatz sous ר)."
+גִּילוּי מִילְּתָא,גִּילוּי מִילְּתָא - גִּלּוּי דָּבָר,un dévoilement,✗,false,גִּילּוּי מִילְּתָא,openai/gpt-oss-120b,,,"Le premier mot nécessite un dagesh dans ל (גִּילּוּי) comme le montrent le dictionnaire et les citations du Talmud, sinon la vocalisation est incorrecte."
+גְּמִירִי,גְּמִירִי - לְמֵדִים,on a appris/on a reçu comme loi,✓,-,-,,,,"Le mot גְּמִירִי se vocalise avec dagesh et shva sur ג, hiriq sur מ et ר, correspondant au sens «on a appris/on a reçu comme loi» tel qu attesté dans les passages cités."
+גָּמַר,גְּמַר - נִגְמַר; גָּמַר; לָמַד,(il) apprend/fin de,✓,-,-,,,,"גָּמַר avec kamatz indique le verbe araméen « apprendre », correspondant au sens français visé"
+גְּנַב,גְּנַב - גָּנַב,un voleur (qui vole en cachette),✗,false,גָּנַב,,,,"Le mot araméen «גָּנַב» se vocalise avec kamatz sous le gimel, pas sheva; il signifie «voleur»."
+גְּרֵידָא,גְּרִידָא (שבת קט ב)   - גְּרוּדָה,seulement,✗,false,גְּרִידָא,,,,Le sens « seulement » correspond à la forme araméenne גרידא vocalisée avec hiriq sous ר (גְּרִידָא) selon le dictionnaire et les occurrences du Talmud.
+דְּאוֹרָיְיתָא,דְּאוֹרָיְיתָא - מִן הַתּוֹרָה,(loi) de la torah,✓,-,-,,,,Vocalisation correcte selon le dictionnaire et les occurrences talmudiques.
+דְּאִי,,car si,✓,-,-,,,,"דְּאִי est la forme standard signifiant «car si», avec dagesh, shva et hiriq corrects"
+דְּאִי אִתְּמַר,דְּאִי לָא תֵימָא הָכִי - שֶׁאִם אִי אַתָּה אוֹמֵר כֵּן,car si on avait dit,✓,-,-,openai/gpt-oss-120b,,,"Vocalisation correcte : דְּאִי avec sheva sous ד et hiriq sous א ; אִתְּמַר avec hiriq sous א, dagesh+sheva sous ת, patach sous מ."
+דְּאִי אַשְׁמוֹעִינַן,דְּאִי לָא תֵימָא הָכִי - שֶׁאִם אִי אַתָּה אוֹמֵר כֵּן,car si on nous avait appris,✓,-,-,qwen/qwen3-32b,,,"La vocalisation étudiante correspond exactement à l'usage talmudique vérifié dans les trois contextes fournis. La forme 'דְּאִי אַשְׁמוֹעִינַן' est correcte pour exprimer 'si on nous avait appris', avec le dagesh et les voyelles conformes à l'araméen babylonien."
+דְּאִי לָא תֵימָא הָכִי,דְּאִי לָא תֵימָא הָכִי - שֶׁאִם אִי אַתָּה אוֹמֵר כֵּן,car si tu ne dis pas ainsi,✓,-,-,openai/gpt-oss-120b,,,Vocalisation conforme à l’usage talmudique pour «si tu ne dis pas ainsi»
+דְּאָמְרִי תַרְוַיְיהוּ,דְּאָמְרִי תַרְוַיְיהוּ - שֶׁאוֹמְרִים שְׁנֵיהֶם,qui ont dit tous les deux,✓,-,-,qwen/qwen3-32b,,,La vocalisation étudiante correspond exactement à l'usage attesté dans les contextes gemarriques pour le sens 'qui ont dit tous les deux'. Les formes dans les sources (דְאָמְרִי תַּרְוַיְיהוּ) confirment la vocalisation actuelle.
+דּוּמְיָא,דּוּמְיָא - בְּדוֹמֶה,en ressemblant/ça ressemble,✓,-,-,,,,"Vocalisation correcte : דּוּמְיָא (dagesh, shuruk, shva, kamatz) correspondant au sens « en ressemblant »."
+דָּיֵיק,דָּיֵיק - מְדַקְדֵּק; מֵדֵק; כּוֹתֵשׁ; כָּתוּשׁ; מוּדָק,il déduit,✓,-,-,,,,"Vocalisation conforme aux sources talmudiques, participe actif qal signifiant « il déduit »"
+דִּילְמָא,דִּילְמָא - שֶׁמָּא,peut-être/de peur que,✓,-,-,,,,"Le dagesh et le chirik sur ד, le shva sous ל, le kamatz sous מ sont corrects pour le sens «peut‑être/de peur que»."
+דַּיְקָא נָמֵי,דִּיקָא - מְדֻקְדֶּקֶת,on peut également déduire,✗,false,דִּיקָא נָמֵי,openai/gpt-oss-120b,,,Le mot doit s’écrire דִּיקָא avec dagesh et hiriq; la forme דַּיְקָא est erronée pour le sens « on peut également déduire ».
+דְּכּוּלֵּי עָלְמָא,,car (que) tout le monde,✓,-,-,openai/gpt-oss-120b,,,"Vocalisation conforme à la forme talmudique «דְּכוּלֵּי עָלְמָא», shva, dagesh et tzéré corrects."
+דִּכְתִיב,דִּכְתִיב - שֶׁכָּתוּב; שֶׁנֶּאֱמַר,comme il est écrit/qu'il est écrit,✓,-,-,,,,"Le nikkud correspond à la forme standard du mot araméen דִּכְתִיב signifiant «comme il est écrit», avec dagesh et hiriq corrects"
+דִּלְמָא,דִּלְמָא - שֶׁמָּא,peut-être/de peur que,✓,-,-,,,,"Vocalisation correcte : dagesh au dalet, chirik sous le dalet, shva sous le lamed, kamatz sous le mem, correspondant au sens « peut‑être/de peur que »."
+דָּמֵי,דְּמֵי - דָּמִים (=מחיר),(il) ressemble,✓,-,-,,,,דָּמֵי avec kamatz sous דּ et tzére sous מ signifie « ressemble »; la vocalisation est correcte pour ce sens.
+דְּמֵי,דְּמֵי - דָּמִים (=מחיר),la valeur/les sous,✓,-,-,,,,"Vocalisation correcte : dalet avec dagesh et shva, mem avec tzere, suffix -י, correspond à « dmei » = valeur, prix"
+דְרַבֵּיהּ,,de son maître,✗,false,דְּרַבֵּיהּ,,,,Le dalet doit porter un dagesh (דְּ) dans la forme constructuelle «דְּרַבֵּיהּ» signifiant «de son maître».
+דְרַבָּנָן,,(loi) de nos sages/car les sages...,✗,false,דְּרַבָּנָן,,,,Le préfixe de‑ doit porter un dagesh (דְּ); le reste du nikkud est correct pour le sens « de nos sages ».
+דָּרוֹם,,sud,✗,false,דָרוֹם,,,,"Le dalet de «דָרוֹם» ne porte pas de dagesh; la vocalisation correcte est qamatz sous le dalet et cholam sur le resh, correspondant au sens «sud»."
+דְרָמֵי אַהֲדָדֵי,,qui posent une contradiction,✗,-,-,qwen/qwen3-32b,,,Le dagesh dans ה (הֲ) est incorrect dans אַהֲדָדֵי. La forme correcte est הַדָּדֵי pour le pluriel de hadad (contradiction). Correction IA rejetee car elle modifie le texte arameen au lieu du seul nikkud.
+דְּרַשׁ,דְּרַשׁ - דָּרַשׁ,il a enseigné,✗,false,דָּרַשׁ,,,,"Le passé « il a enseigné » s’écrit דָּרַשׁ avec kamatz sous דּ, pas shva ; דְּרַשׁ est forme imparfaite"
+דָּרְשִׁי,דָּרְשִׁי - דּוֹרְשִׁים,ils ont enseigné,✓,-,-,,,,Le nikkud correspond à la forme plurielle du verbe דרש signifiant « ils ont enseigné » ; la vocalisation donnée (דָּרְשִׁי) est attestée dans les passages cités.
+דָּרְשִׁינַן,דָּרְשִׁינַן - אָנוּ דוֹרְשִׁים; נִדְרֹשׁ,on apprend (du verset),✓,-,-,,,,"Forme plurielle 1ʳʸ pers. du verbe דרש, vocalisation conforme au sens «on apprend»."
+הֲוָה,הֲוָה - הָיָה; הָיִיתִי,forme du passé (au singulier),✓,-,-,,,,"Forme parfaite 3ms du verbe הוה, signifiant « était » en araméen babylonien."
+הֲוָה אָמֵינָא,הֲוָה אָמֵינָא - הָיִיתִי אוֹמֵר,j'aurais pu dire (penser),✗,true,הֲוָה אָמֵינָא,openai/gpt-oss-120b,,,"La forme correcte est הֲוָה אָמֵינָא, signifiant «j'aurais pu dire», avec patach sous ה, shva sous ו, kamatz sous א, tzere sous מ, etc."
+הֲווֹ,הֲווֹ - הָיוּ; הֱיוּ; הֵם,forme du passé (au pluriel),✓,-,-,,,,"הֲווֹ est la forme passée plurielle du verbe ""הוה"" (être) en araméen babylonien, vocalisée avec hataf patach sous ה et holam sous ו, correspondant à ""ils étaient""."
+הָוְיָא,הַוְיָא - הָיְתָה,c'est,✓,-,-,,,,"הָוְיָא avec patach sous ה, sheva sous ו, kamatz sous י correspond à la forme araméenne signifiant « c’est » dans la Guemara"
+הֵיכָא,הֵיכָא - הֵיכָן,où/la où,✓,-,-,,,,La forme vocalisée standard du mot araméen "היכא" signifiant « où » est הֵיכָא ; la vocalisation fournie correspond à l'usage du Talmud.
+הֵיכִי,הֵיכִי - אֵיךְ,quand/comment,✓,-,-,,,,"Vocalisation correcte : הֵיכִי correspond à l’adverbe araméen « comment, quand »"
+הֵיכִי דָמֵי,הֵיכִי דָמֵי - כֵּיצַד,de quoi s'agit-il/quel est le cas,✗,true,הֵיכִי דָמֵי,openai/gpt-oss-120b,,,"«הֵיכִי דָמֵי» est une locution araméenne interrogative : הֵיכִי ‘comment/quel’ + דָמֵי ‘de quoi/quel est le cas’, correspondant au sens français indiqué."
+הִילְכְתָא,,halakha/loi donnée à Moché rabbénou au Mont Sinaï,✓,-,-,openai/gpt-oss-120b,,,"Vocalisation correcte : הִילְכְתָא (He‑hiriq, Yod support du i, Lamed‑shva, Kaf‑shva, Tav‑kamatz, Aleph) signifie « halakha » en araméen"
+הָכָא,הָכָא - כַּאן,ici,✓,-,-,,,,"Vocalisation correcte : הָכָא, signifiant « ici » en araméen; aucune modification de lettres n’est requise."
+הָכָא בְּמַאי עֲסִיקִינַן,הָכָא בְּמַאי עֲסִיקִינַן - כַּאן בַּמָּה אָנוּ עֲסוּקִים,ici de quoi parle-t-on,✓,-,-,openai/gpt-oss-120b,,,"Vocalisation conforme à la forme du dictionnaire, aucune correction nécessaire."
+הָכָא כְּתִיב,הָכָא - כַּאן,ici il est écrit,✓,-,-,openai/gpt-oss-120b,,,Vocalisation correcte : הָכָא (kamatz sous ה et kaf) correspond à « ici » en araméen.
+הָכָא מֵעִנְיָינֵיהּ דִּקְרָא,הָכָא - כַּאן,ici on va selon le sujet du verset,✓,-,-,openai/gpt-oss-120b,,,"Vocalisation conforme aux sources talmudiques : הָכָא (kamatz), מֵעִנְיָינֵיהּ (segol, hiriq, dagesh), דִּקְרָא (dagesh, hiriq, kamatz)."
+הָכִי - אִין הָכִי נַמֵּי/הָכִי נַמֵּי,הָכִי - כַּךְ,ainsi/voir aussi,✓,-,-,openai/gpt-oss-120b,,,La vocalisation «הָכִי» pour «ainsi/voir aussi» et «אִין» pour «il n'y a pas» sont correctes dans le contexte donné.
+הָכִי אִתְּמַר,הָכִי - כַּךְ,ainsi il a été dit,✓,-,-,openai/gpt-oss-120b,,,"Vocalisation correcte : הָכִי (kamatz, hiriq) et אִתְּמַר (shva, dagesh tav, shva, patach) correspondant au sens « ainsi il a été dit »."
+הָכִי נַמֵּי,הָכִי נַמֵּי - אַף כַּךְ [הוּא],effectivement/de cette même façon,✓,-,-,openai/gpt-oss-120b,,,"Le nikkud correspond à la forme dictionnaire הָכִי נַמֵּי signifiant « effectivement », conforme aux occurrences du Talmud."
+הָכִי קָאָמַר,הָכִי קָאָמַר - כַּךְ הוּא אוֹמֵר,ainsi il a été dit,✓,-,-,openai/gpt-oss-120b,,,Vocalisation correcte pour le sens « ainsi il a été dit »
+הָכִי קָאָמְרִינַן,הָכִי - כַּךְ,ainsi on a voulu dire,✓,-,-,openai/gpt-oss-120b,,,"Vocalisation conforme aux sources talmudiques : הָכִי = ainsi, קָאָמְרִינַן = nous disons"
+הִלְכְתָא,הִלְכְתָא - הֲלָכָה,loi donnée a Moché au mont Sinai/halakha,✓,-,-,,,,"Vocalisation correcte pour le sens « halakha » : הִלְכְתָא (hé avec hiriq, lamed avec shva, kaf avec dagesh, tav avec kamatz)."
+הָנֵי - הָנֵי מִילֵּי,הָנֵי - אֵלּוּ,ceux-là/ces/voir aussi,✓,-,-,openai/gpt-oss-120b,,,Vocalisation correcte pour הָנֵי (« ceux‑là ») et מִילֵּי (« voir aussi ») selon le dictionnaire
+הָנֵי מִילֵּי,הָנֵי מִילֵּי - דְּבָרִים אֵלּוּ; בַּמֶּה דְבָרִים אֲמוּרִים,il s'agit uniquement,✓,-,-,openai/gpt-oss-120b,,,Vocalisation correcte : הָנֵי מִילֵּי signifie « ces mots seulement » en araméen.
+הָנִיחָא,הָנִיחָא - זוֹ נוֹחָה,ça va bien (dans ce cas/selon),✓,-,-,,,,"Vocalisation correcte du mot araméen הָנִיחָא signifiant «ça va bien», conforme aux occurrences du Talmud."
+הָנָךְ,הָנָךְ - הָהֵם; אוֹתָם,ceux-là,✓,-,-,,,,Vocalisation correcte du pronom démonstratif 'הָנָךְ' signifiant 'ceux‑là'.
+הֵעִיד,,il a témoigné,✓,-,-,,,,"Vocalisation correcte : hé‑‘i‑d (tzéré sous ה, hiriq sous ע), forme qal perfect 3ms signifiant « il a témoigné »."
+הָשָׁתָא,הָשָׁתָא - עַכְשָׁיו,maintenant/si déjà,✗,false,הַשְׁתָּא,,,,"Le mot araméen «השתא» s’écrit habituellement avec patach sous ה, sheva sous שׁ et kamatz sous תּ, signifiant «maintenant». Le nikkud «הָשָׁתָא» utilise des kamatz incorrects."
+הָתָם,הָתָם - שָׁם,là-bas,✓,-,-,,,,Vocalisation correcte pour le sens 'là‑bas' (équivalent à שָׁם).
+וְאִי,אני מתחיל מסכת חולין:בהקלה לאחר זבחים-מנחותבחשש לאור אורך המסכתבחשש מפרק אלו טריפותכרגיל כמו כל מסכתהצבעהתוצאות,et si/or si/et ce n'est pas,✓,-,-,,,,"וְאִי avec sheva sous ו et hiriq sous א, signifiant « et si », correspond au sens visé."
+וְאִי לְדִידָךְ,אני מתחיל מסכת חולין:בהקלה לאחר זבחים-מנחותבחשש לאור אורך המסכתבחשש מפרק אלו טריפותכרגיל כמו כל מסכתהצבעהתוצאות,et (or) si selon toi,✓,-,-,openai/gpt-oss-120b,,,Vocalisation correcte : וְאִי (et/si) + לְדִידָךְ (selon ton opinion). Aucun changement requis.
+וְאִידָךְ,,et l'autre,✗,false,וְאִידַּךְ,,,,Le dalet doit porter un dagesh (וְאִידַּךְ) pour la forme araméenne signifiant « et l'autre »; le reste du nikkud est correct.
+וַאֲפִילּוּ,,et même,✗,false,וַאֲפִילוּ,,,,Le dagesh dans ל est incorrect; la forme correcte est וַאֲפִילוּ signifiant « et même ».
+וְגוֹ',,etc.,✗,-,-,,,,"Le sens « etc. » s’écrit וְגוֹ : sheva sous ו, holam sur ג. L’apostrophe finale n’appartient pas au mot. Correction IA rejetee car elle modifie le texte arameen au lieu du seul nikkud."
+וַדַּאי,,il est évident/cas où l'on est sûr,✓,-,-,,,,"Le nikkud וַדַּאי est attesté dans la Guemara pour le sens «certainement», la patach sous ו et le dagesh fort dans ד sont corrects."
+וְהָא,והא תנן - והרי שנינו,or pourtant/et celui-la/et ça,✓,-,-,,,,"וְהָא est la forme araméenne signifiant «et cela/et celui‑la», la vocalisation avec sheva sous ו et kamatz sous ה est correcte pour le sens visé"
+וְהָא אֲנַן,והא תנן - והרי שנינו,or pourtant nous...,✗,-,-,openai/gpt-oss-120b,,,"Le nikkud de «אֲנַן» est erroné ; la forme araméenne correcte est «תְּנַן» (tav dagesh, shva) signifiant «et pourtant nous». Correction IA rejetee car elle modifie le texte arameen au lieu du seul nikkud."
+וְהָכְתִיב,,or pourtant il est écrit (dans un verset),✓,-,-,,,,"וְהָכְתִיב est la forme araméenne avec וְ + הָ (qamatz) + כְ (sheva) + תִ (hiriq) + ב, correspondant à « et il est écrit », conforme au sens visé"
+וְהַלֹּא,,et (or) pourtant,✗,false,וַהֲלֹא,,,,"«וַהֲלֹא» signifie «et pourtant» en araméen; il s’écrit avec patach sous ו, hataf‑patach sous ה, cholam sous ל, sans dagesh"
+וְהָתַנְיָא,והתניא - והרי שנויה (פתיחה לקושיה); וזו שנויה,et pourtant (/effectivement) il y a une braïta ainsi,✓,-,-,,,,"וְהָתַנְיָא est la forme araméenne signifiant « et il est enseigné », avec le préfixe וְ et la vocalisation kamatz‑patach‑shva‑kamatz, conforme au sens visé."
+וְהָתְנַן,והתנן - והרי שנינו,et pourtant (/effectivement) il y a une michna ainsi,✗,false,וְהִתְנַן,,,,"Le heh doit prendre hiriq (הִ) et le tav a sheva, le nun patach, forme nifal de תנן signifiant «il est enseigné», correspondant au sens français visé."
+וְכוּ',,etc.,✗,false,וְכּוּ',,,,Le kaf doit porter un dagesh (וְכּוּ') pour la forme abrégée de 'וכולן'; la vocalisation shuruk est correcte.
+וְכִי תֵימָא,וְכִי תֵימָא (ברכות ב ב)   - וּכְשֶׁתֹּאמַר; וְאִם תֹּאמַר,et si tu dis/et si tu essayes de répondre,✓,-,-,openai/gpt-oss-120b,,,"וְכִי = conjonction 'et si', תֵימָא = forme verbale araméenne 2e pers. masc. signifiant 'tu diras', nikkud conforme aux sources"
+וְכֵיוָן,,et puisque,✓,-,-,,,,"Vocalisation correcte : וְ (sheva), כֵ (tzere), י (sans voyelle), וָ (kamatz), נ (sans voyelle) pour le sens « et puisque » en araméen"
+וְכַמָּה,,et combien,✗,false,וְכַּמָּה,,,,Le kaf doit porter un dagesh dans «כמה»; la forme correcte est וְכַּמָּה pour le sens «et combien».
+וְלָא מִידֵי,וְלָא - ולא; וְאֵין הַדָּבָר כֵּן,et rien du tout,✓,-,-,qwen/qwen3-32b,,,"La vocalisation étudiante correspond aux formes attestées dans les contextes de la Guemara (Berakhot 23b, 27a, 56a) pour le sens 'et rien du tout'. La forme 'וְלָא מִידֵי' est grammaticalement correcte avec le tsere sur le י et le dagesh dans le ד."
+וּלְטַעְמָךְ,,et d'après toi,✓,-,-,,,,"Vocalisation conforme à l’usage talmudique : וּ (shuruk), לְ (sheva), טַ (patach), עְ (sheva), מָ (kamatz), ךְ (sheva) → «et d’après toi»."
+וְלִיטַעְמָ(י)ךְ,וְלִיטְעָמָיךְ - וּלְטַעַמְךָ; וּלְשִׁיטָתְךָ,et d'après toi,✗,-,-,,,,"Le ט doit porter un sheva (טְ) et non un patach, et le י avant ך doit avoir un hiriq (יִ) ; la forme correcte est וְלִיטְעָמָיךְ correspondant à « et d'après toi ». Correction IA rejetee car elle modifie le texte arameen au lieu du seul nikkud."
+וְלֵימָא,,(et) tu n'as qu'à dire,✓,-,-,,,,"«וְלֵימָא» est correctement vocalisé : vav avec sheva, lamed segol + yod, mem kamatz, aleph, signifiant «et tu n'as qu'à dire»."
+וְלִיפְרוֹךְ,,(et) on n'a qu'à objecter...,✓,-,-,,,,"La vocalisation וְלִיפְרוֹךְ correspond à la forme imprimée du Talmud : sheva sous ו, hiriq sous ל, sheva sous פ, cholam sous ר et sheva final sous ך, signifiant « et on peut objecter »."
+וְלִיתְנֵי,,(et) on n'a qu'à enseigner,✓,-,-,,,,"Vav avec sheva, לִ avec hiriq, תְ avec sheva, נֵי avec tzéré ; correspond au sens '(et) on n'a qu\'à enseigner'."
+וְלִפְרוֹךְ,,(et) on n'a qu'à objecter...,✓,-,-,,,,"Vocalisation conforme à l’usage talmudique : וְ (sheva), לִ (hiriq), פְ (sheva), רוֹ (cholam), ךְ (sheva)."
+וּמוֹדֶה,,et il est d'accord,✓,-,-,,,,"Vocalisation correcte : וּ (shuruk) + מֹ (cholam) + דֶ (segol) + ה final, correspondant au sens « et il est d'accord » en araméen."
+וּמָטוּ,,et certains penchent (à dire),✓,-,-,,,,Vocalisation correcte : וּ (shuruk) + מָ (qamatz) + טוּ (shuruk) correspondant à « et certains penchent (à dire) ».
+וּמִי מָצֵית אָמְרַתְּ הָכִי,וּמִיעֲרָב הוּא דְלָא עָרֵיב לְהוּ (תמורה לד א)   - וּלְעָרֵב הוּא שֶׁאֵינוֹ מְעָרֵב אוֹתָם,est-ce que tu peux dire ainsi,✗,false,וּמִי מָצֵית אָמַרְתְּ הָכִי,qwen/qwen3-32b,,,"L'erreur porte sur 'אמרת' : le mem final doit avoir un patach (אָמַרְתְּ) et non un tzere. La forme correcte correspond aux usages dans Shabbat, Yoma et Ketubot."
+וּצְרִיכָא,,et on a eu besoin,✓,-,-,,,,"Vav avec shuruk, צְ avec shva, רִ avec hiriq, כָ avec kamatz et alef final, forme standard du verbe « צריך » signifiant « et on a eu besoin »."
+וְקָסָבַר,,et il pense,✓,-,-,,,,"Le nikkud correspond à la forme araméenne קָסָבַר «penser», utilisée dans les passages cités."
+וְרָמֵי,ורמינהו - וְהָטֵל אוֹתָן,et il objecte/Rami est aussi le Nom d'un rav,✓,-,-,,,,"Vocalisation conforme, le mot désigne le nom propre Rami ou l’objection d’un rav"
+וּרְמִינְהוּ,ורמינהו - וְהָטֵל אוֹתָן,et on objecte,✓,-,-,,,,"Vocalisation conforme au modèle araméen רמינא, le préfixe וּ, sheva, hiriq, sheva et shuruk sont corrects pour le sens « et on objecte »."
+וְשָׁוִין,,et ils sont d'accord (dans...),✗,-,-,,,,"Le verbe araméen « שׁוֹוִין » signifie « ils sont d’accord, ils sont égaux ». Le shin porte un cholam (שׁוֹ) et non un kamatz (שָׁ). Le préfixe וְ reste avec sheva. Correction IA rejetee car elle modifie le texte arameen au lieu du seul nikkud."
+וְשָׁמְעִינַן,,et on nous a fait entendre,✓,-,-,,,,Vocalisation conforme à l’usage talmudique : וְ (vav avec sheva) + שָׁ (patach) + מְ (sheva) + עִ (hiriq) + נַ (patah) + ן (nun) forme 1re pers. pl. futur signifiant « et on nous fera entendre ».
+וְתוּ לָא מִידֵּי,וְתוּ לֵיכָּא - וְאֵין עוֹד?,et il n'y a rien (à dire) en plus,✓,-,-,qwen/qwen3-32b,,,"La vocalisation étudiante correspond aux occurrences attestées dans la Guemara (עירובין קג ע""ב, סוכה לו ע""ב, יבמות לט ע""א) pour le sens ""et il n'y a rien (à dire) en plus"". La forme ""וְתוּ לָא מִידֵּי"" est grammaticalement correcte avec les voyelles et signes de prosodie préservés."
+וְתוּ לֵיכָּא,וְתוּ לֵיכָּא - וְאֵין עוֹד?,est-ce qu'il n'y a pas (d'autres cas),✓,-,-,openai/gpt-oss-120b,,,Vocalisation conforme à l'usage talmudique pour la locution signifiant «il n’y a pas d’autre cas»
+וְתִיפּוֹק לֵיהּ,,pourquoi tu n'apprends pas d’ici,✓,-,-,openai/gpt-oss-120b,,,"La vocalisation «וְתִיפּוֹק לֵיהּ» correspond à la forme talmudique attestée, avec sheva sous ו, hiriq sous ת, dagesh dans פּ, et qamatz‑hiriq sous לֵי, donc correcte pour le sens visé."
+זִימְנָא,זִימְנָא - זְמַן; פְּעָמִים,une fois,✓,-,-,,,,"Vocalisation correcte du mot araméen זימנא signifiant «une fois» (hiriq sous ז, shva sous מ, kamatz sous נ)."
+זִימְנָא חֲדָא,זִימְנָא חֲדָא - פַּעַם אַחַת,une fois,✓,-,-,openai/gpt-oss-120b,,,"Vocalisation correcte, correspond au sens «une fois»"
+זִימְנִין סַגִּיאִין,זִימְנִין סַגִּיאִין - פְּעָמִים הַרְבֵּה,de nombreuses fois,✗,true,זִימְנִין סַגִּיאִין,openai/gpt-oss-120b,,,"Le nikkud correct est זִימְנִין סַגִּיאִין, avec hiriq sous ז, sheva sous מ, hiriq sous נ, patach sous ס, dagesh et hiriq sous גּ, etc., pour le sens « de nombreuses fois »."
+זָקֵן,,homme âgé/sage,✓,-,-,,,,Vocalisation correcte pour l'adjectif hébreu/araméen «זָקֵן» signifiant homme âgé ou sage.
+זָקָן,,barbe,✗,false,זָקַן,,,,"En araméen, le substantif «זָקַן» (barbe) s’écrit avec kamatz sous ז et patach sous נ ; le kamatz sous נ donne «זָקֵן» qui signifie «vieillard»."
+חַד,חַד - אֶחָד,un/une/aiguisé/piquant,✓,-,-,,,,Le nikkud patach sous ח indique le sens 'un' (אחד) et correspond aux occurrences talmudiques du terme "חד" signifiant « un » ou « une mesure ».
+חַד אֲמַר,חַד - אֶחָד,un (des avis) a dit,✗,false,חַד אָמַר,openai/gpt-oss-120b,,,Le verbe araméen אמר se vocalise אָמַר (kamatz sous aleph) ; חַד reste חַד avec patach. Le sheva sous aleph est incorrect.
+חֲדָא,חֲדָא - אַחַת,un/une/premièrement,✓,-,-,,,,"La vocalisation חֲדָא (hataf patach sous ח, kamatz sous ד, aucune voyelle sur א) correspond à l'usage araméen signifiant «un/une, premièrement»."
+חֲדָא זִימְנָא,חֲדָא זִימְנָא - פַּעַם אַחַת,une fois,✓,-,-,openai/gpt-oss-120b,,,Vocalisation conforme au dictionnaire et aux occurrences guémaratiques pour le sens «une fois».
+חַדְתָּא,חַדְתָּא - חֲדָשָׁה; הֶחָדָשׁ,nouveau,✓,-,-,,,,Vocalisation correcte pour le sens "nouveau" en araméen
+חַדְתֵּי,חַדְתִּי (ברכות ג ב)   - חֲדָשָׁה,nouveaux,✓,-,-,,,,"חַדְתֵּי avec tzere est attesté dans la Guemara (ex. Shabbat) pour le sens « nouveaux »; la forme avec hiriq (חַדְתִּי) est également utilisée, les deux sont correctes."
+חֲזָא,חֲזָא - רָאָה,il a vu,✓,-,-,,,,Forme correcte du parfait 3e masc. sing. du verbe חזה « voir »
+חִיוְיָא,חִיוְּיָא - נָחָשׁ,un serpent,✗,false,חִיוְּיָא,openai/gpt-oss-120b,,,Le vav doit porter un shuruk (וּ) et non un shva (וְ); la forme correcte est חִיוְּיָא signifiant « serpent ».
+חַיָּיב,חַיֵּיב - חִיֵּב,il est condamné/coupable/obligé,✗,false,חַיִּיב,,,,"Le verbe araméen 'חייב' s’écrit חַיִּיב (patach sous ח, dagesh + hiriq sous י) pour le sens 'obligé, coupable, condamné'"
+חָיְישִׁינַן,חָיְישִׁינַן - אָנוּ חוֹשְׁשִׁים,on craint,✓,-,-,,,,"Vocalisation correcte, correspond au sens «on craint» attesté dans les passages de la Guemara."
+חֲלוּקִין,,ils discutent,✓,-,-,,,,Vocalisation correcte du participe pluriel «חֲלוּקִין» du verbe «חלוק» = ils discutent
+חַמְרָא,חֲמָרָא - חֲמוֹר,du vin,✓,-,-,,,,Vocalisation correcte : חַמְרָא signifie « vin » en araméen babylonien.
+חֲמָרָא,חֲמָרָא - חֲמוֹר,un âne,✓,-,-,,,,"חֲמָרָא avec chataf‑patach sous ח, qamatz sous מ et ר correspond à la forme araméenne « חמור » (âne) ; la vocalisation est conforme au dictionnaire et aux usages pour ce sens."
+חַמְשָׁא,חַמְשָׁא - חֲמִשָּׁה,cinq/jeudi,✓,-,-,,,,"La vocalisation חַמְשָׁא correspond à l'aramaïque חמשא «cinq», conforme au sens visé."
+טוּבָא,טוּבָא - מְאֹד; הַרְבֵּה,beaucoup,✓,-,-,,,,"Vocalisation correcte : טוּבָא signifie « beaucoup », conforme au dictionnaire et aux occurrences du Talmud."
+טוּלָּא,טוּלָּא - צֵל; מַטְלִית בְּצוּרַת אֶצְבָּעוֹן,de l'ombre,✓,-,-,,,,"טוּלָּא avec shuruk, dagesh et kamatz correspond à « ombre »; conforme au dictionnaire et aux occurrences guémarotiques."
+טַעְמָא מַאי,טַעֲמָא - טַעַם,pour quelle raison...,✓,-,-,openai/gpt-oss-120b,,,Vocalisation correcte : טַעְמָא מַאי correspond au sens «pour quelle raison?».
+יְהַב,יְהַב - נָתַן,il a donné,✓,-,-,,,,"Forme correcte du verbe araméen «יהב» signifiant «il a donné», vocalisation yod‑sheva‑he‑patach‑bet."
+יוֹמָא,יוֹמָא - יוֹם; שֶׁמֶשׁ; מַסֶכֶת יוֹמָא,jour,✓,-,-,,,,"יומא est la forme araméenne de « jour » ; la vocalisation יוֹמָא (holam sur י, kamatz sur מ) est la forme usuelle dans la Guémara"
+יוֹמֵי,יוֹמֵי - יָמִים,des jours,✓,-,-,,,,"«יוֹמֵי» est la forme constructe plurielle d'«יום», correctement vocalisée pour le sens «des jours»."
+יָכוֹל,,on pourrait croire que/il peut,✓,-,-,,,,"Vocalisation correcte : יָ (patah) + כֹּ (cholam) + ל sans voyelle, correspond au sens « il peut » en araméen."
+יָשֵׁן,,il dort,✓,-,-,,,,"Le mot araméen ישן « il dort » se vocalise correctement en יָשֵׁן : patach sous י, dagesh et segol sous ש, aucune modification des consonnes."
+יָשָׁן,,ancien,✗,false,יָשֵׁן,,,,En araméen babylonien le mot 'ישן' s’écrit avec segol sous le shin (יָשֵׁן) pour le sens 'ancien'.
+יָתְבִי,יְתַבִי (חולין נט א)   - יָשַׁבְתִּי,ils étaient assis,✓,-,-,,,,Forme יָתְבִי avec kamatz sous י et shva sous ת correspond à la forme araméenne « ils étaient assis » attestée dans la Guemara.
+יְתֵיב,יְתֵיב - יָשַׁב,il était assis,✗,false,יָתֵיב,,,,"Le yod porte un qamatz, pas un sheva; la forme יָתֵיב est le participe araméen signifiant « il était assis » tel que attesté dans les passages cités."
+כָּאן,כאן - כאן,ici,✓,-,-,,,,Le nikkud « כָּאן » avec dagesh et kamatz est la forme correcte pour le sens « ici » en araméen babylonien.
+כְּבָר,כְּבָר קְדַמוּךְ רַבָּנָן (שבת יט א; בבא בתרא קסז א; חולין קה א)   - כְּבָר קְדָמוּךָ חֲכָמִים (ולימדונו בענין זה),déjà,✓,-,-,,,,"Vocalisation correcte : כְּבָר (kaf avec dagesh, sheva, bet avec kamatz, resh) correspond à « déjà » en araméen babylonien."
+כְּגוֹן,כְּגוֹן אֲנָא - כָּמוֹנִי,par exemple,✓,-,-,,,,"Vocalisation correcte : dagesh au kaf, sheva, holam sur ג, kamatz sur נ, sens « par exemple » confirmé par les occurrences du Talmud"
+כִּדְבָעֵי,,comme il a demandé/comme il voulait,✓,-,-,,,,Vocalisation conforme à l’usage talmudique pour le sens comme il a demandé/comme il voulait
+כְּוָותִי,כְּוָותִי - כָּמוֹנִי,comme moi (comme mon avis),✓,-,-,,,,"Vocalisation correcte, correspond au sens « comme moi » (כָּמוֹנִי)."
+כְּוָותֵיהּ,כְּוָותֵיהּ - כָּמוֹהוּ,comme lui (comme son avis),✓,-,-,,,,"Vocalisation conforme au texte talmudique, correspond au sens « comme lui »"
+כּוּלֵּי הַאי,כּוּלֵּי הַאי - כֹּל זֶה; כָּל כַּךְ,tellement,✓,-,-,openai/gpt-oss-120b,,,"Vocalisation correcte : כּוּלֵּי הַאי (dagesh dans כּ, וּ, לּ, tzere sous ל) signifiant « tellement » en araméen."
+כּוּלֵּי הַאי לָא חָיְישִׁינַן,כּוּלֵּי הַאי - כֹּל זֶה; כָּל כַּךְ,on ne craint pas tellement,✗,-,-,openai/gpt-oss-120b,,,"«האי» s’écrit הָאִי (patach sous ה, hiriq sous א) et le verbe est חָיְשִׁינַן (chet‑kamatz, shin‑dagesh‑hiriq), pas חָיְישִׁינַן Correction IA rejetee car elle modifie le texte arameen au lieu du seul nikkud."
+כּוּלֵּי עָלְמָא,כּוּלֵּי עָלְמָא - כָּל הָעוֹלָם,tout le monde,✓,-,-,openai/gpt-oss-120b,,,"Vocalisation correcte : כּוּלֵּי avec dagesh, shuruk, dagesh, tzere; עָלְמָא avec qamatz, shva, qamatz."
+כּוּתִי,,homme de la tribu des כותים,✓,-,-,,,,"Vocalisation correcte : kaf avec dagesh, vav shuruk, tav avec hiriq, yod comme mater lectionis, correspondant à 'Cuthite'."
+כּוּתִים,,tribu qui était à l'écart du peuple juif/des hommes Kouti,✓,-,-,,,,"Vocalisation correcte : כּוּתִים (pluriel de כּוּת, désignant les Cuthites, correspondant au sens «tribu à l'écart»)."
+כִּי אֲתָא,כִּי אוֹרְחֵיהּ - כְּדַרְכּוֹ,quand il est venu,✓,-,-,openai/gpt-oss-120b,,,"Vocalisation correcte : כִּי (kaf dagesh, hiriq) + אֲתָא (aleph avec hataf patach, tav kamatz, aleph) signifiant « quand il est venu »."
+כִּי הַאי גַּוָּונָא,כִּי הַאי גַּוָּונָא - כְּגוֹן זֶה,de cette manière,✗,false,כִּי הַאי גַּוְונָא,qwen/qwen3-32b,,,Le mot correct est 'גַּוְונָא' (avec chiri sur la deuxième voyelle) et non 'גַּוָּונָא' (avec patach et dagesh). Le dagesh dans 'גַּוָּונָא' est incorrect car le ג ne porte pas de dagesh dans cette forme. Les contextes de la Guemara montrent systématiquement 'גַּוְונָא' avec chiri.
+כִּי הֵיכִי,כִּי הֵיכִי ד - כְּמוֹ שֶׁ-,afin que/comme,✓,-,-,qwen/qwen3-32b,,,"La vocalisation étudiante est correcte : כִּי (patach) + הֵיכִי (tzeirei + dagesh) correspond aux usages dans Berakhot 6a, 8a et 10a pour le sens 'comme si'/'afin que'."
+כֵּיוָן,כיון - כיון,puisque,✓,-,-,,,,"Vocalisation conforme aux éditions Steinsaltz, כֵּיוָן signifie «puisque» en araméen babylonien."
+כֵּיצַד,,comment,✗,false,כֵיצַד,,,,"Le kaf ne porte pas de dagesh ; la forme correcte est כֵיצַד (tzéré sous ק, patach sous צ) pour le sens « comment »."
+כָּל,כָּל אֵימָת - כָּל זְמַן; כָּל פַּעַם,tous/tout,✓,-,-,,,,"Le kamatz sous le kaf (avec dagesh) correspond à l'araméen « כָּל » = « tout, tous », conforme aux occurrences citées"
+כֹּל כְּמִינֵּיהּ,כֹּל כְּמִינֵיהּ - הַכֹּל הֵימֶנּוּ?,est-ce la même chose? (זה בכוחו),✓,-,-,qwen/qwen3-32b,,,La vocalisation étudiante est correcte : כְּמִינֵּיהּ (tzeirei sur נ et patakh sur ה) correspond bien au sens visé "cela est-il la même chose ?" dans les contextes gemarriques. Les formes alternatives comme כְּמִינֵיהוֹן (avec וֹן) ne s'appliquent pas ici.
+כׇּל שֶׁכֵּן,כָּל אֵימָת - כָּל זְמַן; כָּל פַּעַם,à plus forte raison,✗,false,כֹּל שֶׁכֵּן,openai/gpt-oss-120b,,,"«כל» s’écrit avec cholam (כֹּל), pas qamatz; le reste «שֶׁכֵּן» est correct pour le sens «à plus forte raison»."
+כְּלָל,כְּלָלָא - כְּלָל,cela vient inclure/un terme qui inclut/un principe/une généralité/du tout,✓,-,-,,,,"Le nikkud (dagesh dans le kaf, sheva sous le kaf, kamatz sous le lamed) correspond à l’adverbe araméen «כלל» signifiant «en général, principe général»."
+כַּמָּה,כְּמַה (זבחים כד א; מנחות יז א)   - כְּמוֹ; כְּמִי,combien,✗,false,כְּמַה,,,,"Le mot araméen «כמה» signifiant «combien» se vocalise généralement כְּמַה (sheva sous ק, patach sous מ). La forme donnée כַּמָּה est incorrecte."
+כְּנֶגֶד,,par rapport/ face à,✓,-,-,,,,"«כְּנֶגֶד» est la forme prépositionnelle araméenne signifiant «face à, par rapport à», la vocalisation ke‑neged (kaf avec dagesh et shva, nun avec segol, gimmel avec segol) est correcte."
+כֶּסֶף,,de l'argent,✓,-,-,,,,"Vocalisation correcte : dagesh dans כּ, segol sous כּ et ס, aucune voyelle sur ף, correspondant à « argent »."
+כְּשֵׁם,,de même (que),✓,-,-,,,,"Vocalisation correcte : kaf avec dagesh et sheva, shin avec tzere, mem final, correspondant à la locution araméenne « כְּשֵׁם » signifiant « de même que »."
+לָא פְּלִיגִי,לָא - לֹא,ils ne discutent pas,✓,-,-,openai/gpt-oss-120b,,,"לָא est la négation araméenne avec kamatz; פְּלִיגִי est le participe pluriel de פלג «discuter», la vocalisation (sheva, hiriq, hiriq) est correcte pour le sens «ils ne discutent pas»."
+לָא קַשְׁיָא,לָא - לֹא,ce n'est pas une question (car...),✓,-,-,openai/gpt-oss-120b,,,"Vocalisation correcte : לָא קַשְׁיָא, signifiant « pas de difficulté », correspondant au sens français visé."
+לָא שְׁנָא,לָא שְׁנָא - לא שָׁנָה (מלשון שינוי),ça ne change pas,✓,-,-,openai/gpt-oss-120b,,,Vocalisation correcte : לָא שְׁנָא correspond au sens « ça ne change pas » en araméen babylonien
+לָאו,לָאו - לֹא,n'est-ce pas/interdit/négation,✓,-,-,,,,"לָאו est la forme araméenne de la négation, vocalisée avec kamatz sous ל et ו sans voyelle, équivalente à לֹא en hébreu."
+לְאֵיתוֹיֵי מַאי,לְאַיְתּוֹיֵי - לְהָבִיא; לְרַבּוֹת,cela vient inclure quoi?,✓,-,-,qwen/qwen3-32b,,,"La vocalisation étudiante correspond exactement aux formes attestées dans les contextes talmudiques (Shabbat 101a, Yevamot 21b, Nedarim 84b) pour le sens 'cela vient inclure quoi?'. Les voyelles et les signes de prosodie sont conformes aux usages araméens du Talmud babylonien."
+לְבַסּוֹף,,à la fin,✓,-,-,,,,"Vocalisation correcte pour le sens «à la fin» : patach sous ב, dagesh dans ס, cholam sous ו, aucune modification des consonnes"
+לְדִידֵיהּ,לְדִידֵיהּ - לוֹ; לְעַצְמוֹ; אוֹתוֹ,pour lui/à lui,✓,-,-,,,,Vocalisation correcte : לְדִידֵיהּ signifie « pour lui/à lui » en araméen babylonien
+לְדִידָךְ,לְדִידָךְ - לְךָ; לְדַעְתְּךָ,selon toi/pour toi,✓,-,-,,,,Vocalisation correcte : לְ (sheva) דִ (hiriq) י (yod) דָ (kamatz) ךְ (sheva). Corresponds au sens « selon toi/pour toi ».
+לְדִידַן,לְדִידַן - לָנוּ; לְדַעְתֵּנוּ,selon nous/pour nous,✓,-,-,,,,Vocalisation conforme à l’usage talmudique pour le sens « selon nous »
+לֶהֱוֵי,,que ce soit,✓,-,-,,,,"Vocalisation correcte : segol sous ל, hataf segol sous ה, tséré sous ו, aucune voyelle sous י, correspondant à l’araméen « lehvei » = « que ce soit »."
+לֵיכָּא,לִיכָא (שבת קלד א)   - עִרְבּוּב,il n'y a pas,✓,-,-,,,,Leikka (לֵיכָּא) signifie « il n’y a pas » en araméen babylonien ; la vocalisation avec tsere sous ל et dagesh dans כּ est la forme attestée dans la Guemara.
+לֵילֵי,לֵילֵי - לֵילוֹת,les nuits,✓,-,-,,,,"לֵילֵי est le pluriel construct araméen de לֵילָא «nuit», correspondant à «les nuits» en français."
+לֵילְיָא,לֵילְיָא - לַיְלָה,la nuit,✓,-,-,,,,"Vocalisation correcte : לֵילְיָא correspond à l’aramaïque « night », sens « la nuit », conforme aux sources du Talmud."
+לֵימָא,לֵימָא - יֹאמַר; נֹאמַר,on n'a qu'à dire/peut-être,✓,-,-,,,,"Le nikkud לֵימָא (lamed‑tzere, yod, mem‑kamatz, aleph) est la forme usuelle signifiant «on dit / peut‑être», conforme au sens français visé"
+לֵימָא כְתַנָּאֵי,לֵימָא כְתַנָּאֵי - נֹאמַר כַּתַּנָּאִים,est-ce que c'est la même discussion que les tanaïm?,✗,false,לֵימָא כְּתַנָּאֵי,openai/gpt-oss-120b,,,Le préfixe «כְּ» requiert un dagesh; la forme correcte est לֵימָא כְּתַנָּאֵי
+לִימֵּד,,il a appris,✓,-,-,,,,"לִימֵּד est la forme qal parfait 3ms du verbe araméen ל‑מ‑ד «apprendre», correspondant à «il a appris»."
+לִישָּׁנָא אַחֲרִינָא,לִישָּׁנָא אַחֲרִינָא - לָשׁוֹן אַחֵר (=נוסח אחר),autre version,✓,-,-,openai/gpt-oss-120b,,,Nikkud conforme aux sources talmudiques pour le sens «autre version»
