@@ -26,3 +26,9 @@ Features:
 ### Question 2
 Thanks. Could you just do the front without the margins between the table and the panel, and the left part and the right border. I don't need it, and I don't like the table to be shrinked.
 Also, the correction IA filter should be like no correction, correction but 0 changes, 1 change, 2 changes ect...
+
+### Question 3
+Thanks. But my meaning was that the panel takes place in the screen, but not by shrinking the table. So instead of shrink and let the spaces, when the panel is open you remove the spaces so there is place for the panel.
+
+### Question 4
+No. The panel is still overload. I don't want an overload. I want it to take place from the screen itself.

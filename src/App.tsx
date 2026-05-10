@@ -77,6 +77,20 @@ const MANUAL_FILTER_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "rerun", label: "Relance IA" },
 ];
 
+// Correction-IA buckets by number of changed visual clusters.
+// "" = all, "none" = no correction emitted, "0" = correction present but
+// identical to the original, "1".."4" = that exact diff count, "5+" = 5 or more.
+const CORRECTION_FILTER_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "",     label: "Tous" },
+  { value: "none", label: "Pas de correction" },
+  { value: "0",    label: "0 changement" },
+  { value: "1",    label: "1 changement" },
+  { value: "2",    label: "2 changements" },
+  { value: "3",    label: "3 changements" },
+  { value: "4",    label: "4 changements" },
+  { value: "5+",   label: "5+ changements" },
+];
+
 type ManualStatus = WordEntry["manual_status"];
 
 const EMPTY_AI_VERIFICATION: AIVerification = {
@@ -238,47 +252,6 @@ const getExactFilterValue = (entry: WordEntry): string => {
   return flag ? "true" : "false";
 };
 
-const matchesTextFilter = (haystack: string, needle: string): boolean => {
-  if (!needle) return true;
-  return haystack.toLowerCase().includes(needle.toLowerCase());
-};
-
-const entryMatchesFilters = (entry: WordEntry, filters: Filters): boolean => {
-  if (!matchesTextFilter(entry.word_with_nikkud || "", filters.word)) {
-    return false;
-  }
-  if (!matchesTextFilter(entry.dictionary?.meaning || "", filters.dictionary)) {
-    return false;
-  }
-  if (!matchesTextFilter(entry.french_meaning || "", filters.meaning)) {
-    return false;
-  }
-  if (
-    !matchesTextFilter(
-      entry.ai_verification.corrected_nikkud_word || "",
-      filters.correction
-    )
-  ) {
-    return false;
-  }
-  if (filters.status && getStatusFilterValue(entry) !== filters.status) {
-    return false;
-  }
-  if (filters.exact && getExactFilterValue(entry) !== filters.exact) {
-    return false;
-  }
-  if (filters.manual) {
-    if (filters.manual === "unset") {
-      if (entry.manual_status) return false;
-    } else if (filters.manual === "rerun") {
-      if (!entry.ai_verification.needs_ai_rerun) return false;
-    } else if (entry.manual_status !== filters.manual) {
-      return false;
-    }
-  }
-  return true;
-};
-
 const splitVisualClusters = (text: string): string[] => {
   const clusters: string[] = [];
   let current = "";
@@ -303,6 +276,73 @@ const splitVisualClusters = (text: string): string[] => {
   }
 
   return clusters;
+};
+
+/**
+ * Count how many visual clusters differ between the original word and the
+ * corrected word. A "visual cluster" is a base letter + its attached nikkud/
+ * cantillation marks — this matches what the user sees on screen.
+ *
+ * Returns `null` when there is no correction to compare to.
+ */
+const countCorrectionChanges = (entry: WordEntry): number | null => {
+  const corrected = entry.ai_verification.corrected_nikkud_word;
+  if (!corrected) return null;
+  const original = entry.word_with_nikkud || "";
+  const left = splitVisualClusters(original);
+  const right = splitVisualClusters(corrected);
+  const maxLen = Math.max(left.length, right.length);
+  let diff = 0;
+  for (let i = 0; i < maxLen; i += 1) {
+    if ((left[i] || "") !== (right[i] || "")) diff += 1;
+  }
+  return diff;
+};
+
+const getCorrectionFilterValue = (entry: WordEntry): string => {
+  const changes = countCorrectionChanges(entry);
+  if (changes === null) return "none";
+  if (changes >= 5) return "5+";
+  return String(changes);
+};
+
+const matchesTextFilter = (haystack: string, needle: string): boolean => {
+  if (!needle) return true;
+  return haystack.toLowerCase().includes(needle.toLowerCase());
+};
+
+const entryMatchesFilters = (entry: WordEntry, filters: Filters): boolean => {
+  if (!matchesTextFilter(entry.word_with_nikkud || "", filters.word)) {
+    return false;
+  }
+  if (!matchesTextFilter(entry.dictionary?.meaning || "", filters.dictionary)) {
+    return false;
+  }
+  if (!matchesTextFilter(entry.french_meaning || "", filters.meaning)) {
+    return false;
+  }
+  if (
+    filters.correction &&
+    getCorrectionFilterValue(entry) !== filters.correction
+  ) {
+    return false;
+  }
+  if (filters.status && getStatusFilterValue(entry) !== filters.status) {
+    return false;
+  }
+  if (filters.exact && getExactFilterValue(entry) !== filters.exact) {
+    return false;
+  }
+  if (filters.manual) {
+    if (filters.manual === "unset") {
+      if (entry.manual_status) return false;
+    } else if (filters.manual === "rerun") {
+      if (!entry.ai_verification.needs_ai_rerun) return false;
+    } else if (entry.manual_status !== filters.manual) {
+      return false;
+    }
+  }
+  return true;
 };
 
 const renderComparedWord = (
@@ -974,13 +1014,491 @@ const App = () => {
       ]
     : [];
 
+  const renderPanel = () => {
+    if (!selectedWord) return null;
+    return (
+      <>
+        <div className="bg-[#1F130B] text-white p-4 shrink-0">
+          <div className="flex justify-between items-center mb-3">
+            <span className="text-[9px] font-black tracking-widest uppercase opacity-35">
+              Expertise Linguistique
+            </span>
+            <button
+              onClick={() => setSelectedWordIdx(null)}
+              className="p-1 hover:bg-white/10 rounded transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="flex justify-between items-baseline gap-3 mb-3">
+            <p className="text-sm opacity-55 italic max-w-[45%] leading-relaxed">
+              « {selectedWord.french_meaning} »
+            </p>
+            <h3 className="font-serif text-2xl font-bold text-right" dir="rtl">
+              {selectedWord.word_with_nikkud}
+            </h3>
+          </div>
+          <div className="flex gap-2">
+            {selectedWord.dictionary.dict_url && (
+              <a
+                href={selectedWord.dictionary.dict_url}
+                target="_blank"
+                rel="noreferrer"
+                className="flex-1 py-2 bg-[#C4A35A] hover:bg-[#B3934A] text-white text-[10px] font-black rounded flex items-center justify-center gap-1.5 transition-colors uppercase tracking-widest"
+              >
+                <Search className="w-3 h-3" /> Dictionnaire
+              </a>
+            )}
+            <button
+              onClick={() => setShowPrompt((value) => !value)}
+              className="flex-1 py-2 bg-white/10 hover:bg-white/20 text-white text-[10px] font-black rounded flex items-center justify-center gap-1.5 transition-colors uppercase tracking-widest"
+            >
+              {showPrompt ? "Masquer Prompt" : "Voir Prompt"}
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-grow overflow-y-auto bg-[#FDFBF7]">
+          {showPrompt && (
+            <pre className="m-4 p-4 bg-gray-900 text-green-400 text-[10px] font-mono whitespace-pre-wrap leading-relaxed rounded-lg shadow-inner">
+              {generatePrompt(selectedWord)}
+            </pre>
+          )}
+
+          <div className="p-4 pb-0">
+            <div className="bg-white border border-[#D4C3A3] p-3 rounded-lg">
+              <h4 className="text-[9px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5 text-[#8B5E3C]">
+                <BookOpen className="w-3 h-3" /> Dictionnaire
+              </h4>
+              <div className="space-y-2 text-base leading-relaxed">
+                <p><span className="font-bold">Requête :</span> {selectedWord.dictionary.query_used || "—"}</p>
+                <p><span className="font-bold">Définition :</span> {selectedWord.dictionary.meaning || "—"}</p>
+                <p>
+                  <span className="font-bold">Suggestions :</span>{" "}
+                  {selectedWord.dictionary.suggestions?.length
+                    ? selectedWord.dictionary.suggestions.join(", ")
+                    : "—"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 pb-0">
+            <div className="bg-white border border-[#D4C3A3] p-3 rounded-lg space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <h4 className="text-[9px] font-black uppercase tracking-widest text-[#8B5E3C]">
+                  Revue manuelle
+                </h4>
+                {selectedManualStatus ? (
+                  <span className={`px-2 py-0.5 rounded-full border text-[9px] font-bold uppercase ${selectedManualStatus.className}`}>
+                    {selectedManualStatus.label}
+                  </span>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {MANUAL_STATUS_OPTIONS.map((option) => {
+                  const isActive = selectedWord.manual_status === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      onClick={() =>
+                        updateSelectedWord((entry) => ({
+                          ...entry,
+                          manual_status: entry.manual_status === option.value ? null : option.value,
+                        }))
+                      }
+                      className={`px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase ${
+                        option.className
+                      } ${isActive ? "ring-2 ring-offset-1 ring-[#8B5E3C]/25" : "opacity-75"}`}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={() =>
+                  updateSelectedWord((entry) => ({
+                    ...entry,
+                    ai_verification: {
+                      ...normalizeAiVerification(entry.ai_verification),
+                      needs_ai_rerun: !normalizeAiVerification(entry.ai_verification).needs_ai_rerun,
+                    },
+                  }))
+                }
+                className={`px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase w-fit ${
+                  selectedWord.ai_verification.needs_ai_rerun
+                    ? "bg-blue-100 text-blue-800 border-blue-200"
+                    : "bg-white text-[#8B5E3C] border-[#D4C3A3]"
+                }`}
+              >
+                {selectedWord.ai_verification.needs_ai_rerun
+                  ? "Relance IA activée"
+                  : "Marquer pour relance IA"}
+              </button>
+              <textarea
+                value={selectedWord.manual_note || ""}
+                onChange={(e) =>
+                  updateSelectedWord((entry) => ({
+                    ...entry,
+                    manual_note: e.target.value,
+                  }))
+                }
+                placeholder="Note libre pour cette entrée…"
+                rows={4}
+                className="w-full py-2 px-3 rounded border border-[#D4C3A3] text-base leading-relaxed bg-[#FDFBF7] focus:outline-none focus:border-[#C4A35A] resize-y"
+              />
+            </div>
+          </div>
+
+          {selectedWord._status === "done" && (
+            <div className="p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3 text-[10px] uppercase font-bold text-[#8B5E3C]">
+                <span>Modèle utilisé : {selectedModelUsed || "—"}</span>
+                <div className="flex items-center gap-3">
+                  {selectedWord.ai_verification.needs_ai_rerun ? (
+                    <span className="text-blue-700">Relance IA demandée</span>
+                  ) : null}
+                  {selectedExactMatch !== null && (
+                    <span className={selectedExactMatch ? "text-green-700" : "text-red-700"}>
+                      Même exact ? {selectedExactMatch ? "true" : "false"}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div
+                  className={`p-3 rounded-lg border-2 ${
+                    selectedWord.ai_verification.nikkud_correct
+                      ? "bg-green-50 border-green-200"
+                      : "bg-red-50 border-red-200"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 mb-2">
+                    {selectedWord.ai_verification.nikkud_correct ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                    ) : (
+                      <XCircle className="w-3.5 h-3.5 text-red-600" />
+                    )}
+                    <span className="text-[8px] font-black uppercase tracking-widest opacity-50">
+                      {selectedWord.ai_verification.nikkud_correct ? "Correct" : "À corriger"}
+                    </span>
+                  </div>
+                  <div className="font-serif text-xl text-right leading-loose" dir="rtl">
+                    {!selectedWord.ai_verification.nikkud_correct &&
+                    selectedWord.ai_verification.corrected_nikkud_word
+                      ? renderComparedWord(
+                          selectedWord.word_with_nikkud,
+                          selectedWord.ai_verification.corrected_nikkud_word,
+                          "original"
+                        )
+                      : selectedWord.word_with_nikkud}
+                  </div>
+                </div>
+
+                <div
+                  className={`p-3 rounded-lg border-2 flex flex-col justify-center ${
+                    !selectedWord.ai_verification.nikkud_correct &&
+                    selectedWord.ai_verification.corrected_nikkud_word
+                      ? "bg-amber-50 border-amber-200"
+                      : "bg-[#F6F1E6] border-[#D4C3A3]"
+                  }`}
+                >
+                  {!selectedWord.ai_verification.nikkud_correct &&
+                  selectedWord.ai_verification.corrected_nikkud_word ? (
+                    <>
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <span className="text-[8px] font-black uppercase tracking-widest opacity-50">
+                          Correction IA
+                        </span>
+                      </div>
+                      <div className="font-serif text-xl text-right font-bold text-green-800 leading-loose" dir="rtl">
+                        {renderComparedWord(
+                          selectedWord.ai_verification.corrected_nikkud_word,
+                          selectedWord.word_with_nikkud,
+                          "corrected"
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-[11px] text-gray-400 italic text-center">
+                      {selectedWord.ai_verification.nikkud_correct
+                        ? "Vocalisation correcte ✓"
+                        : "Aucune correction fournie"}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {selectedWord.ai_verification.notes && (
+                <div className="bg-white border border-[#D4C3A3] p-3 rounded-lg">
+                  <h4 className="text-[9px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5 text-[#8B5E3C]">
+                    <Info className="w-3 h-3" /> Analyse Grammaticale
+                  </h4>
+                  <p className="text-base leading-relaxed text-[#2D1B0E]">
+                    {selectedWord.ai_verification.notes}
+                  </p>
+                </div>
+              )}
+
+              {selectedWord.ai_verification.pages_same_meaning.length > 0 && (
+                <div className="bg-white border border-[#D4C3A3] p-3 rounded-lg">
+                  <h4 className="text-[9px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5 text-[#8B5E3C]">
+                    <BookOpen className="w-3 h-3" /> Même sens —{" "}
+                    {selectedWord.ai_verification.pages_same_meaning.length} page(s)
+                  </h4>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedWord.ai_verification.pages_same_meaning.map((page, index) => (
+                      <span
+                        key={index}
+                        className="text-xs px-2.5 py-0.5 rounded-full bg-[#F6F1E6] border border-[#D4C3A3] font-serif"
+                        dir="rtl"
+                      >
+                        {page}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {normalizeTrials(selectedWord.ai_verification.ai_trials).length > 0 && (
+            <div className="px-4 pb-4">
+              <div className="bg-white border border-[#D4C3A3] p-3 rounded-lg space-y-3">
+                <h4 className="text-[9px] font-black uppercase tracking-widest text-[#8B5E3C]">
+                  Historique des essais IA
+                </h4>
+                {normalizeTrials(selectedWord.ai_verification.ai_trials).map((trial, index) => (
+                  <div
+                    key={`${trial.model}-${index}`}
+                    className={`border rounded-lg p-3 space-y-2 ${getTrialTone(trial)}`}
+                  >
+                    <div className="flex items-center justify-between gap-2 text-[10px] uppercase font-bold">
+                      <span>{trial.model}</span>
+                      <span>{trial.status}</span>
+                    </div>
+                    <p className="text-xs leading-relaxed">{trial.message}</p>
+                    <pre className="text-[10px] whitespace-pre-wrap break-words bg-white/70 border border-current/15 rounded p-3 font-mono">
+                      {trial.raw_response || trial.message}
+                    </pre>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {selectedWord._status === "error" && (
+            <div className="m-4 p-3 rounded-lg border border-red-200 bg-red-50 text-sm text-red-700 space-y-2">
+              <p>{selectedWord.ai_verification.last_error || "Erreur lors de l'analyse. Relancez l'analyse pour réessayer."}</p>
+            </div>
+          )}
+
+          {(selectedWord._status === "pending" || selectedWord._status === "processing") && (
+            <div className="m-4 p-3 rounded-lg border border-[#D4C3A3] bg-[#F6F1E6] text-sm text-[#8B5E3C] italic text-center flex items-center justify-center gap-2">
+              {selectedWord._status === "processing" && (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              )}
+              {selectedWord._status === "processing" ? "Analyse en cours…" : "En attente d'analyse…"}
+            </div>
+          )}
+
+          <div className="p-4 pt-0">
+            <header className="border-b-2 border-[#1F130B]/10 pb-2 flex justify-between items-center mb-3">
+              <h4 className="font-serif text-base text-[#1F130B]">
+                Sources Guemara ({selectedOccurrences.length})
+              </h4>
+              <BookOpen className="w-4 h-4 opacity-10" />
+            </header>
+
+            {selectedOccurrences.length === 0 ? (
+              <div className="py-8 text-center border-2 border-dashed border-gray-100 rounded-xl italic text-[11px] text-gray-400">
+                Aucune source trouvée.
+              </div>
+            ) : shouldGroupOccurrences ? (
+              <div className="space-y-4">
+                {selectedOccurrenceGroups.map((group) => (
+                  <section key={group.key} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <h5 className="font-serif text-sm text-[#1F130B]">
+                          {group.title}
+                        </h5>
+                        {group.dictionaryMatch && selectedDictionaryNikkudWord ? (
+                          <span className="text-[9px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200 font-bold">
+                            {selectedDictionaryNikkudWord}
+                          </span>
+                        ) : null}
+                      </div>
+                      <span className="text-[10px] uppercase font-bold opacity-40">
+                        {group.occurrences.length} ressource(s)
+                      </span>
+                    </div>
+
+                    {group.occurrences.length === 0 ? (
+                      <div className="py-4 text-center border border-dashed border-[#D4C3A3] rounded-lg italic text-[11px] text-gray-400 bg-white">
+                        Aucune occurrence dans cette catégorie.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {group.occurrences.map((occurrence, occurrenceIndex) => (
+                          <div
+                            key={`${group.key}-${occurrence.pageLabel}-${occurrenceIndex}`}
+                            className="border border-[#D4C3A3] rounded-lg overflow-hidden bg-white"
+                          >
+                            <div className="flex justify-between items-center bg-[#F6F1E6] px-3 py-2 border-b border-[#D4C3A3]/40">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[8px] opacity-35 font-bold uppercase">
+                                  occ. {occurrence.occurrenceIndex + 1}
+                                </span>
+                                {selectedDictionaryNikkudWord &&
+                                hasSameDisplayedNikkud(
+                                  occurrence.gemaraWord,
+                                  selectedDictionaryNikkudWord
+                                ) ? (
+                                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200 font-bold">
+                                    {selectedDictionaryNikkudWord}
+                                  </span>
+                                ) : null}
+                              </div>
+                              <h5 className="font-serif text-sm font-bold" dir="rtl">
+                                {occurrence.pageLabel}
+                              </h5>
+                            </div>
+
+                            <div className="px-3 py-2.5">
+                              <p
+                                className="text-right font-serif text-lg leading-loose"
+                                dir="rtl"
+                              >
+                                {renderOccurrenceContext(occurrence)}
+                              </p>
+                              {(occurrence.steinsaltzContext ||
+                                occurrence.steinsaltzContextTokens.length > 0) && (
+                                <p
+                                  className="text-right font-serif text-sm text-gray-600 mt-2 leading-relaxed border-t border-dashed border-[#D4C3A3]/40 pt-2"
+                                  dir="rtl"
+                                >
+                                  {renderSteinsaltzContext(occurrence)}
+                                </p>
+                              )}
+                            </div>
+
+                            {(occurrence.urlNikud || occurrence.urlExplain) && (
+                              <div className="flex gap-4 px-3 py-1.5 bg-gray-50/60 border-t border-[#D4C3A3]/30">
+                                {occurrence.urlNikud && (
+                                  <a
+                                    href={occurrence.urlNikud}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-[9px] text-[#C4A35A] font-bold uppercase tracking-wide hover:underline"
+                                  >
+                                    ↗ Texte vocalisé
+                                  </a>
+                                )}
+                                {occurrence.urlExplain && (
+                                  <a
+                                    href={occurrence.urlExplain}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-[9px] text-[#C4A35A] font-bold uppercase tracking-wide hover:underline"
+                                  >
+                                    ↗ Explication
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {selectedOccurrences.map((occurrence, occurrenceIndex) => (
+                  <div
+                    key={`${occurrence.pageLabel}-${occurrenceIndex}`}
+                    className="border border-[#D4C3A3] rounded-lg overflow-hidden bg-white"
+                  >
+                    <div className="flex justify-between items-center bg-[#F6F1E6] px-3 py-2 border-b border-[#D4C3A3]/40">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[8px] opacity-35 font-bold uppercase">
+                          occ. {occurrence.occurrenceIndex + 1}
+                        </span>
+                        {selectedDictionaryNikkudWord &&
+                        hasSameDisplayedNikkud(
+                          occurrence.gemaraWord,
+                          selectedDictionaryNikkudWord
+                        ) ? (
+                          <span className="text-[9px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200 font-bold">
+                            {selectedDictionaryNikkudWord}
+                          </span>
+                        ) : null}
+                      </div>
+                      <h5 className="font-serif text-sm font-bold" dir="rtl">
+                        {occurrence.pageLabel}
+                      </h5>
+                    </div>
+
+                    <div className="px-3 py-2.5">
+                      <p
+                        className="text-right font-serif text-lg leading-loose"
+                        dir="rtl"
+                      >
+                        {renderOccurrenceContext(occurrence)}
+                      </p>
+                      {(occurrence.steinsaltzContext ||
+                        occurrence.steinsaltzContextTokens.length > 0) && (
+                        <p
+                          className="text-right font-serif text-sm text-gray-600 mt-2 leading-relaxed border-t border-dashed border-[#D4C3A3]/40 pt-2"
+                          dir="rtl"
+                        >
+                          {renderSteinsaltzContext(occurrence)}
+                        </p>
+                      )}
+                    </div>
+
+                    {(occurrence.urlNikud || occurrence.urlExplain) && (
+                      <div className="flex gap-4 px-3 py-1.5 bg-gray-50/60 border-t border-[#D4C3A3]/30">
+                        {occurrence.urlNikud && (
+                          <a
+                            href={occurrence.urlNikud}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[9px] text-[#C4A35A] font-bold uppercase tracking-wide hover:underline"
+                          >
+                            ↗ Texte vocalisé
+                          </a>
+                        )}
+                        {occurrence.urlExplain && (
+                          <a
+                            href={occurrence.urlExplain}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[9px] text-[#C4A35A] font-bold uppercase tracking-wide hover:underline"
+                          >
+                            ↗ Explication
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </>
+    );
+  };
+
   return (
-    <div className="min-h-screen bg-[#FDFBF7] text-[#2D1B0E] font-sans">
-      <div
-        className={`w-full max-w-[1600px] mx-auto p-4 md:p-8 transition-[padding] duration-300 ${
-          selectedWord ? "lg:pr-[640px]" : ""
-        }`}
-      >
+    <div className="min-h-screen bg-[#FDFBF7] text-[#2D1B0E] font-sans flex">
+      {/* Main content — takes all available width */}
+      <div className="flex-1 min-w-0 py-4 md:py-8 px-4 md:px-8">
         <header className="text-center mb-8 border-b-2 border-[#D4C3A3] pb-6">
           <h1 className="text-4xl md:text-5xl font-serif font-bold text-[#1F130B] mb-1 tracking-tight">
             מאגר ניקוד ארמי
@@ -1260,16 +1778,19 @@ const App = () => {
                           </select>
                         </th>
                         <th className="px-2 py-1.5">
-                          <input
-                            type="text"
+                          <select
                             value={filters.correction}
                             onChange={(e) =>
                               setFilters((prev) => ({ ...prev, correction: e.target.value }))
                             }
-                            placeholder="Filtrer…"
-                            dir="rtl"
-                            className="w-full text-xs px-2 py-1 border border-[#D4C3A3] rounded bg-white focus:outline-none focus:border-[#C4A35A]"
-                          />
+                            className="w-full text-[10px] px-1 py-1 border border-[#D4C3A3] rounded bg-white focus:outline-none focus:border-[#C4A35A]"
+                          >
+                            {CORRECTION_FILTER_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
                         </th>
                       </tr>
                     </thead>
@@ -1377,504 +1898,40 @@ const App = () => {
 
       <AnimatePresence>
         {selectedWord && (
-          <div className="fixed inset-0 z-50 pointer-events-none">
-            {/*
-             * On small screens: dim + blur the whole app behind the panel
-             *   so the user stays focused on the detail view.
-             * On large screens: no overlay — the main container pads itself
-             *   (lg:pr-[640px]) to leave room for the panel, so both are
-             *   visible at the same time.
-             */}
+          <>
+            {/* Mobile overlay backdrop — only visible below lg */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setSelectedWordIdx(null)}
-              className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto lg:hidden"
+              className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm lg:hidden"
             />
+            {/* Mobile panel — fixed overlay below lg */}
             <motion.div
-              key="details-panel"
+              key="details-panel-mobile"
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="absolute right-0 top-0 h-full w-[92vw] lg:w-[620px] bg-white border-l-2 border-[#1F130B] shadow-2xl pointer-events-auto flex flex-col"
+              className="fixed right-0 top-0 h-full w-[92vw] z-50 bg-white border-l-2 border-[#1F130B] shadow-2xl flex flex-col lg:hidden"
             >
-              <div className="bg-[#1F130B] text-white p-4 shrink-0">
-                <div className="flex justify-between items-center mb-3">
-                  <span className="text-[9px] font-black tracking-widest uppercase opacity-35">
-                    Expertise Linguistique
-                  </span>
-                  <button
-                    onClick={() => setSelectedWordIdx(null)}
-                    className="p-1 hover:bg-white/10 rounded transition-colors"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-                <div className="flex justify-between items-baseline gap-3 mb-3">
-                  <p className="text-sm opacity-55 italic max-w-[45%] leading-relaxed">
-                    « {selectedWord.french_meaning} »
-                  </p>
-                  <h3 className="font-serif text-2xl font-bold text-right" dir="rtl">
-                    {selectedWord.word_with_nikkud}
-                  </h3>
-                </div>
-                <div className="flex gap-2">
-                  {selectedWord.dictionary.dict_url && (
-                    <a
-                      href={selectedWord.dictionary.dict_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex-1 py-2 bg-[#C4A35A] hover:bg-[#B3934A] text-white text-[10px] font-black rounded flex items-center justify-center gap-1.5 transition-colors uppercase tracking-widest"
-                    >
-                      <Search className="w-3 h-3" /> Dictionnaire
-                    </a>
-                  )}
-                  <button
-                    onClick={() => setShowPrompt((value) => !value)}
-                    className="flex-1 py-2 bg-white/10 hover:bg-white/20 text-white text-[10px] font-black rounded flex items-center justify-center gap-1.5 transition-colors uppercase tracking-widest"
-                  >
-                    {showPrompt ? "Masquer Prompt" : "Voir Prompt"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex-grow overflow-y-auto bg-[#FDFBF7]">
-                {showPrompt && (
-                  <pre className="m-4 p-4 bg-gray-900 text-green-400 text-[10px] font-mono whitespace-pre-wrap leading-relaxed rounded-lg shadow-inner">
-                    {generatePrompt(selectedWord)}
-                  </pre>
-                )}
-
-                <div className="p-4 pb-0">
-                  <div className="bg-white border border-[#D4C3A3] p-3 rounded-lg">
-                    <h4 className="text-[9px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5 text-[#8B5E3C]">
-                      <BookOpen className="w-3 h-3" /> Dictionnaire
-                    </h4>
-                    <div className="space-y-2 text-base leading-relaxed">
-                      <p><span className="font-bold">Requête :</span> {selectedWord.dictionary.query_used || "—"}</p>
-                      <p><span className="font-bold">Définition :</span> {selectedWord.dictionary.meaning || "—"}</p>
-                      <p>
-                        <span className="font-bold">Suggestions :</span>{" "}
-                        {selectedWord.dictionary.suggestions?.length
-                          ? selectedWord.dictionary.suggestions.join(", ")
-                          : "—"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-4 pb-0">
-                  <div className="bg-white border border-[#D4C3A3] p-3 rounded-lg space-y-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <h4 className="text-[9px] font-black uppercase tracking-widest text-[#8B5E3C]">
-                        Revue manuelle
-                      </h4>
-                      {selectedManualStatus ? (
-                        <span className={`px-2 py-0.5 rounded-full border text-[9px] font-bold uppercase ${selectedManualStatus.className}`}>
-                          {selectedManualStatus.label}
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {MANUAL_STATUS_OPTIONS.map((option) => {
-                        const isActive = selectedWord.manual_status === option.value;
-                        return (
-                          <button
-                            key={option.value}
-                            onClick={() =>
-                              updateSelectedWord((entry) => ({
-                                ...entry,
-                                manual_status: entry.manual_status === option.value ? null : option.value,
-                              }))
-                            }
-                            className={`px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase ${
-                              option.className
-                            } ${isActive ? "ring-2 ring-offset-1 ring-[#8B5E3C]/25" : "opacity-75"}`}
-                          >
-                            {option.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <button
-                      onClick={() =>
-                        updateSelectedWord((entry) => ({
-                          ...entry,
-                          ai_verification: {
-                            ...normalizeAiVerification(entry.ai_verification),
-                            needs_ai_rerun: !normalizeAiVerification(entry.ai_verification).needs_ai_rerun,
-                          },
-                        }))
-                      }
-                      className={`px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase w-fit ${
-                        selectedWord.ai_verification.needs_ai_rerun
-                          ? "bg-blue-100 text-blue-800 border-blue-200"
-                          : "bg-white text-[#8B5E3C] border-[#D4C3A3]"
-                      }`}
-                    >
-                      {selectedWord.ai_verification.needs_ai_rerun
-                        ? "Relance IA activée"
-                        : "Marquer pour relance IA"}
-                    </button>
-                    <textarea
-                      value={selectedWord.manual_note || ""}
-                      onChange={(e) =>
-                        updateSelectedWord((entry) => ({
-                          ...entry,
-                          manual_note: e.target.value,
-                        }))
-                      }
-                      placeholder="Note libre pour cette entrée…"
-                      rows={4}
-                      className="w-full py-2 px-3 rounded border border-[#D4C3A3] text-base leading-relaxed bg-[#FDFBF7] focus:outline-none focus:border-[#C4A35A] resize-y"
-                    />
-                  </div>
-                </div>
-
-                {selectedWord._status === "done" && (
-                  <div className="p-4 space-y-3">
-                    <div className="flex items-center justify-between gap-3 text-[10px] uppercase font-bold text-[#8B5E3C]">
-                      <span>Modèle utilisé : {selectedModelUsed || "—"}</span>
-                      <div className="flex items-center gap-3">
-                        {selectedWord.ai_verification.needs_ai_rerun ? (
-                          <span className="text-blue-700">Relance IA demandée</span>
-                        ) : null}
-                        {selectedExactMatch !== null && (
-                          <span className={selectedExactMatch ? "text-green-700" : "text-red-700"}>
-                            Même exact ? {selectedExactMatch ? "true" : "false"}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div
-                        className={`p-3 rounded-lg border-2 ${
-                          selectedWord.ai_verification.nikkud_correct
-                            ? "bg-green-50 border-green-200"
-                            : "bg-red-50 border-red-200"
-                        }`}
-                      >
-                        <div className="flex items-center gap-1.5 mb-2">
-                          {selectedWord.ai_verification.nikkud_correct ? (
-                            <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
-                          ) : (
-                            <XCircle className="w-3.5 h-3.5 text-red-600" />
-                          )}
-                          <span className="text-[8px] font-black uppercase tracking-widest opacity-50">
-                            {selectedWord.ai_verification.nikkud_correct ? "Correct" : "À corriger"}
-                          </span>
-                        </div>
-                        <div className="font-serif text-xl text-right leading-loose" dir="rtl">
-                          {!selectedWord.ai_verification.nikkud_correct &&
-                          selectedWord.ai_verification.corrected_nikkud_word
-                            ? renderComparedWord(
-                                selectedWord.word_with_nikkud,
-                                selectedWord.ai_verification.corrected_nikkud_word,
-                                "original"
-                              )
-                            : selectedWord.word_with_nikkud}
-                        </div>
-                      </div>
-
-                      <div
-                        className={`p-3 rounded-lg border-2 flex flex-col justify-center ${
-                          !selectedWord.ai_verification.nikkud_correct &&
-                          selectedWord.ai_verification.corrected_nikkud_word
-                            ? "bg-amber-50 border-amber-200"
-                            : "bg-[#F6F1E6] border-[#D4C3A3]"
-                        }`}
-                      >
-                        {!selectedWord.ai_verification.nikkud_correct &&
-                        selectedWord.ai_verification.corrected_nikkud_word ? (
-                          <>
-                            <div className="flex items-center gap-1.5 mb-2">
-                              <span className="text-[8px] font-black uppercase tracking-widest opacity-50">
-                                Correction IA
-                              </span>
-                            </div>
-                            <div className="font-serif text-xl text-right font-bold text-green-800 leading-loose" dir="rtl">
-                              {renderComparedWord(
-                                selectedWord.ai_verification.corrected_nikkud_word,
-                                selectedWord.word_with_nikkud,
-                                "corrected"
-                              )}
-                            </div>
-                          </>
-                        ) : (
-                          <p className="text-[11px] text-gray-400 italic text-center">
-                            {selectedWord.ai_verification.nikkud_correct
-                              ? "Vocalisation correcte ✓"
-                              : "Aucune correction fournie"}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {selectedWord.ai_verification.notes && (
-                      <div className="bg-white border border-[#D4C3A3] p-3 rounded-lg">
-                        <h4 className="text-[9px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5 text-[#8B5E3C]">
-                          <Info className="w-3 h-3" /> Analyse Grammaticale
-                        </h4>
-                        <p className="text-base leading-relaxed text-[#2D1B0E]">
-                          {selectedWord.ai_verification.notes}
-                        </p>
-                      </div>
-                    )}
-
-                    {selectedWord.ai_verification.pages_same_meaning.length > 0 && (
-                      <div className="bg-white border border-[#D4C3A3] p-3 rounded-lg">
-                        <h4 className="text-[9px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5 text-[#8B5E3C]">
-                          <BookOpen className="w-3 h-3" /> Même sens —{" "}
-                          {selectedWord.ai_verification.pages_same_meaning.length} page(s)
-                        </h4>
-                        <div className="flex flex-wrap gap-1.5">
-                          {selectedWord.ai_verification.pages_same_meaning.map((page, index) => (
-                            <span
-                              key={index}
-                              className="text-xs px-2.5 py-0.5 rounded-full bg-[#F6F1E6] border border-[#D4C3A3] font-serif"
-                              dir="rtl"
-                            >
-                              {page}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {normalizeTrials(selectedWord.ai_verification.ai_trials).length > 0 && (
-                  <div className="px-4 pb-4">
-                    <div className="bg-white border border-[#D4C3A3] p-3 rounded-lg space-y-3">
-                      <h4 className="text-[9px] font-black uppercase tracking-widest text-[#8B5E3C]">
-                        Historique des essais IA
-                      </h4>
-                      {normalizeTrials(selectedWord.ai_verification.ai_trials).map((trial, index) => (
-                        <div
-                          key={`${trial.model}-${index}`}
-                          className={`border rounded-lg p-3 space-y-2 ${getTrialTone(trial)}`}
-                        >
-                          <div className="flex items-center justify-between gap-2 text-[10px] uppercase font-bold">
-                            <span>{trial.model}</span>
-                            <span>{trial.status}</span>
-                          </div>
-                          <p className="text-xs leading-relaxed">{trial.message}</p>
-                          <pre className="text-[10px] whitespace-pre-wrap break-words bg-white/70 border border-current/15 rounded p-3 font-mono">
-                            {trial.raw_response || trial.message}
-                          </pre>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {selectedWord._status === "error" && (
-                  <div className="m-4 p-3 rounded-lg border border-red-200 bg-red-50 text-sm text-red-700 space-y-2">
-                    <p>{selectedWord.ai_verification.last_error || "Erreur lors de l'analyse. Relancez l'analyse pour réessayer."}</p>
-                  </div>
-                )}
-
-                {(selectedWord._status === "pending" || selectedWord._status === "processing") && (
-                  <div className="m-4 p-3 rounded-lg border border-[#D4C3A3] bg-[#F6F1E6] text-sm text-[#8B5E3C] italic text-center flex items-center justify-center gap-2">
-                    {selectedWord._status === "processing" && (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    )}
-                    {selectedWord._status === "processing" ? "Analyse en cours…" : "En attente d'analyse…"}
-                  </div>
-                )}
-
-                <div className="p-4 pt-0">
-                  <header className="border-b-2 border-[#1F130B]/10 pb-2 flex justify-between items-center mb-3">
-                    <h4 className="font-serif text-base text-[#1F130B]">
-                      Sources Guemara ({selectedOccurrences.length})
-                    </h4>
-                    <BookOpen className="w-4 h-4 opacity-10" />
-                  </header>
-
-                  {selectedOccurrences.length === 0 ? (
-                    <div className="py-8 text-center border-2 border-dashed border-gray-100 rounded-xl italic text-[11px] text-gray-400">
-                      Aucune source trouvée.
-                    </div>
-                  ) : shouldGroupOccurrences ? (
-                    <div className="space-y-4">
-                      {selectedOccurrenceGroups.map((group) => (
-                        <section key={group.key} className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <h5 className="font-serif text-sm text-[#1F130B]">
-                                {group.title}
-                              </h5>
-                              {group.dictionaryMatch && selectedDictionaryNikkudWord ? (
-                                <span className="text-[9px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200 font-bold">
-                                  {selectedDictionaryNikkudWord}
-                                </span>
-                              ) : null}
-                            </div>
-                            <span className="text-[10px] uppercase font-bold opacity-40">
-                              {group.occurrences.length} ressource(s)
-                            </span>
-                          </div>
-
-                          {group.occurrences.length === 0 ? (
-                            <div className="py-4 text-center border border-dashed border-[#D4C3A3] rounded-lg italic text-[11px] text-gray-400 bg-white">
-                              Aucune occurrence dans cette catégorie.
-                            </div>
-                          ) : (
-                            <div className="space-y-3">
-                              {group.occurrences.map((occurrence, occurrenceIndex) => (
-                                <div
-                                  key={`${group.key}-${occurrence.pageLabel}-${occurrenceIndex}`}
-                                  className="border border-[#D4C3A3] rounded-lg overflow-hidden bg-white"
-                                >
-                                  <div className="flex justify-between items-center bg-[#F6F1E6] px-3 py-2 border-b border-[#D4C3A3]/40">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-[8px] opacity-35 font-bold uppercase">
-                                        occ. {occurrence.occurrenceIndex + 1}
-                                      </span>
-                                      {selectedDictionaryNikkudWord &&
-                                      hasSameDisplayedNikkud(
-                                        occurrence.gemaraWord,
-                                        selectedDictionaryNikkudWord
-                                      ) ? (
-                                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200 font-bold">
-                                          {selectedDictionaryNikkudWord}
-                                        </span>
-                                      ) : null}
-                                    </div>
-                                    <h5 className="font-serif text-sm font-bold" dir="rtl">
-                                      {occurrence.pageLabel}
-                                    </h5>
-                                  </div>
-
-                                  <div className="px-3 py-2.5">
-                                    <p
-                                      className="text-right font-serif text-lg leading-loose"
-                                      dir="rtl"
-                                    >
-                                      {renderOccurrenceContext(occurrence)}
-                                    </p>
-                                    {(occurrence.steinsaltzContext ||
-                                      occurrence.steinsaltzContextTokens.length > 0) && (
-                                      <p
-                                        className="text-right font-serif text-sm text-gray-600 mt-2 leading-relaxed border-t border-dashed border-[#D4C3A3]/40 pt-2"
-                                        dir="rtl"
-                                      >
-                                        {renderSteinsaltzContext(occurrence)}
-                                      </p>
-                                    )}
-                                  </div>
-
-                                  {(occurrence.urlNikud || occurrence.urlExplain) && (
-                                    <div className="flex gap-4 px-3 py-1.5 bg-gray-50/60 border-t border-[#D4C3A3]/30">
-                                      {occurrence.urlNikud && (
-                                        <a
-                                          href={occurrence.urlNikud}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                          className="text-[9px] text-[#C4A35A] font-bold uppercase tracking-wide hover:underline"
-                                        >
-                                          ↗ Texte vocalisé
-                                        </a>
-                                      )}
-                                      {occurrence.urlExplain && (
-                                        <a
-                                          href={occurrence.urlExplain}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                          className="text-[9px] text-[#C4A35A] font-bold uppercase tracking-wide hover:underline"
-                                        >
-                                          ↗ Explication
-                                        </a>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </section>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {selectedOccurrences.map((occurrence, occurrenceIndex) => (
-                        <div
-                          key={`${occurrence.pageLabel}-${occurrenceIndex}`}
-                          className="border border-[#D4C3A3] rounded-lg overflow-hidden bg-white"
-                        >
-                          <div className="flex justify-between items-center bg-[#F6F1E6] px-3 py-2 border-b border-[#D4C3A3]/40">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[8px] opacity-35 font-bold uppercase">
-                                occ. {occurrence.occurrenceIndex + 1}
-                              </span>
-                              {selectedDictionaryNikkudWord &&
-                              hasSameDisplayedNikkud(
-                                occurrence.gemaraWord,
-                                selectedDictionaryNikkudWord
-                              ) ? (
-                                <span className="text-[9px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200 font-bold">
-                                  {selectedDictionaryNikkudWord}
-                                </span>
-                              ) : null}
-                            </div>
-                            <h5 className="font-serif text-sm font-bold" dir="rtl">
-                              {occurrence.pageLabel}
-                            </h5>
-                          </div>
-
-                          <div className="px-3 py-2.5">
-                            <p
-                              className="text-right font-serif text-lg leading-loose"
-                              dir="rtl"
-                            >
-                              {renderOccurrenceContext(occurrence)}
-                            </p>
-                            {(occurrence.steinsaltzContext ||
-                              occurrence.steinsaltzContextTokens.length > 0) && (
-                              <p
-                                className="text-right font-serif text-sm text-gray-600 mt-2 leading-relaxed border-t border-dashed border-[#D4C3A3]/40 pt-2"
-                                dir="rtl"
-                              >
-                                {renderSteinsaltzContext(occurrence)}
-                              </p>
-                            )}
-                          </div>
-
-                          {(occurrence.urlNikud || occurrence.urlExplain) && (
-                            <div className="flex gap-4 px-3 py-1.5 bg-gray-50/60 border-t border-[#D4C3A3]/30">
-                              {occurrence.urlNikud && (
-                                <a
-                                  href={occurrence.urlNikud}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-[9px] text-[#C4A35A] font-bold uppercase tracking-wide hover:underline"
-                                >
-                                  ↗ Texte vocalisé
-                                </a>
-                              )}
-                              {occurrence.urlExplain && (
-                                <a
-                                  href={occurrence.urlExplain}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-[9px] text-[#C4A35A] font-bold uppercase tracking-wide hover:underline"
-                                >
-                                  ↗ Explication
-                                </a>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+              {renderPanel()}
+            </motion.div>
+            {/* Desktop panel — in-flow flex sibling, no overlay */}
+            <motion.div
+              key="details-panel-desktop"
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 620, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="hidden lg:flex flex-col h-screen sticky top-0 overflow-hidden bg-white border-l-2 border-[#1F130B] shadow-2xl shrink-0"
+            >
+              <div className="w-[620px] h-full flex flex-col">
+                {renderPanel()}
               </div>
             </motion.div>
-          </div>
+          </>
         )}
       </AnimatePresence>
     </div>
