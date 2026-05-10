@@ -30,6 +30,53 @@ type SortKey =
   | "correction";
 type SortDirection = "asc" | "desc";
 
+type FilterKey =
+  | "word"
+  | "dictionary"
+  | "meaning"
+  | "status"
+  | "manual"
+  | "exact"
+  | "correction";
+
+type Filters = Record<FilterKey, string>;
+
+const EMPTY_FILTERS: Filters = {
+  word: "",
+  dictionary: "",
+  meaning: "",
+  status: "",
+  manual: "",
+  exact: "",
+  correction: "",
+};
+
+const STATUS_FILTER_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "", label: "Tous" },
+  { value: "correct", label: "Correct" },
+  { value: "incorrect", label: "À corriger" },
+  { value: "processing", label: "En cours" },
+  { value: "pending", label: "En attente" },
+  { value: "error", label: "Erreur" },
+];
+
+const EXACT_FILTER_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "", label: "Tous" },
+  { value: "true", label: "Oui" },
+  { value: "false", label: "Non" },
+  { value: "none", label: "—" },
+];
+
+const MANUAL_FILTER_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "", label: "Tous" },
+  { value: "good", label: "Good" },
+  { value: "to_fix", label: "To fix" },
+  { value: "need_more_sources", label: "Need more sources" },
+  { value: "to_ask", label: "To ask" },
+  { value: "unset", label: "Non marqué" },
+  { value: "rerun", label: "Relance IA" },
+];
+
 type ManualStatus = WordEntry["manual_status"];
 
 const EMPTY_AI_VERIFICATION: AIVerification = {
@@ -173,6 +220,64 @@ const getExactMatchFlag = (entry: WordEntry): boolean | null => {
 
 const getManualStatusOption = (status?: ManualStatus | null) =>
   MANUAL_STATUS_OPTIONS.find((option) => option.value === status) || null;
+
+const getStatusFilterValue = (entry: WordEntry): string => {
+  if (entry._status === "error") return "error";
+  if (entry._status === "processing") return "processing";
+  if (entry._status === "pending") return "pending";
+  if (entry._status === "done") {
+    if (entry.ai_verification.nikkud_correct === true) return "correct";
+    if (entry.ai_verification.nikkud_correct === false) return "incorrect";
+  }
+  return "";
+};
+
+const getExactFilterValue = (entry: WordEntry): string => {
+  const flag = getExactMatchFlag(entry);
+  if (flag === null) return "none";
+  return flag ? "true" : "false";
+};
+
+const matchesTextFilter = (haystack: string, needle: string): boolean => {
+  if (!needle) return true;
+  return haystack.toLowerCase().includes(needle.toLowerCase());
+};
+
+const entryMatchesFilters = (entry: WordEntry, filters: Filters): boolean => {
+  if (!matchesTextFilter(entry.word_with_nikkud || "", filters.word)) {
+    return false;
+  }
+  if (!matchesTextFilter(entry.dictionary?.meaning || "", filters.dictionary)) {
+    return false;
+  }
+  if (!matchesTextFilter(entry.french_meaning || "", filters.meaning)) {
+    return false;
+  }
+  if (
+    !matchesTextFilter(
+      entry.ai_verification.corrected_nikkud_word || "",
+      filters.correction
+    )
+  ) {
+    return false;
+  }
+  if (filters.status && getStatusFilterValue(entry) !== filters.status) {
+    return false;
+  }
+  if (filters.exact && getExactFilterValue(entry) !== filters.exact) {
+    return false;
+  }
+  if (filters.manual) {
+    if (filters.manual === "unset") {
+      if (entry.manual_status) return false;
+    } else if (filters.manual === "rerun") {
+      if (!entry.ai_verification.needs_ai_rerun) return false;
+    } else if (entry.manual_status !== filters.manual) {
+      return false;
+    }
+  }
+  return true;
+};
 
 const splitVisualClusters = (text: string): string[] => {
   const clusters: string[] = [];
@@ -329,28 +434,87 @@ interface DisplayOccurrence {
   urlExplain: string;
   occurrenceIndex: number;
   gemaraWord: string;
+  gemaraWords: string[];
   fullContext: string;
+  fullContextTokens: string[];
+  matchedPositions: number[];
   before: string[];
   after: string[];
   steinsaltzContext: string;
+  steinsaltzContextTokens: Array<{ t: string; b: boolean }>;
 }
 
 const flattenOccurrences = (entry: WordEntry): DisplayOccurrence[] =>
   entry.gemara_pages.flatMap((page) =>
-    page.occurrences.map((occurrence, occurrenceIndex) => ({
-      pageLabel: page.label,
-      urlNikud: page.url_nikud,
-      urlExplain: page.url_explain,
-      occurrenceIndex,
-      gemaraWord: occurrence.gemara.word,
-      fullContext: occurrence.gemara.full_context,
-      before: occurrence.gemara.before,
-      after: occurrence.gemara.after,
-      steinsaltzContext: occurrence.steinsaltz?.full_context || "",
-    }))
+    page.occurrences.map((occurrence, occurrenceIndex) => {
+      const gemara = occurrence.gemara;
+      const gemaraWord = gemara.word || "";
+      const fullContext = gemara.full_context || "";
+      const fullContextTokens =
+        gemara.full_context_tokens && gemara.full_context_tokens.length > 0
+          ? gemara.full_context_tokens
+          : fullContext
+          ? fullContext.split(/\s+/).filter(Boolean)
+          : [];
+      const gemaraWords =
+        gemara.words && gemara.words.length > 0
+          ? gemara.words
+          : gemaraWord
+              .split(/\s*(?:\u2026|\.\.\.|\s)\s*/)
+              .filter(Boolean);
+
+      return {
+        pageLabel: page.label,
+        urlNikud: page.url_nikud,
+        urlExplain: page.url_explain,
+        occurrenceIndex,
+        gemaraWord,
+        gemaraWords,
+        fullContext,
+        fullContextTokens,
+        matchedPositions:
+          gemara.matched_positions && gemara.matched_positions.length > 0
+            ? gemara.matched_positions
+            : [],
+        before: gemara.before,
+        after: gemara.after,
+        steinsaltzContext: occurrence.steinsaltz?.full_context || "",
+        steinsaltzContextTokens:
+          occurrence.steinsaltz?.full_context_tokens || [],
+      };
+    })
   );
 
 const renderOccurrenceContext = (occurrence: DisplayOccurrence) => {
+  // Preferred path: we have the tokenised context + per-word matched positions
+  // → highlight each matched word individually (no more literal "…").
+  if (
+    occurrence.fullContextTokens.length > 0 &&
+    occurrence.matchedPositions.length > 0
+  ) {
+    const matched = new Set(occurrence.matchedPositions);
+    return (
+      <>
+        {occurrence.fullContextTokens.map((token, index) => {
+          const isMatched = matched.has(index);
+          return (
+            <React.Fragment key={`tok-${index}`}>
+              {isMatched ? (
+                <span className="text-[#8B5E3C] font-black px-1.5 bg-amber-50 rounded border border-amber-200">
+                  {token}
+                </span>
+              ) : (
+                <span className="opacity-40">{token}</span>
+              )}
+              {index < occurrence.fullContextTokens.length - 1 ? " " : null}
+            </React.Fragment>
+          );
+        })}
+      </>
+    );
+  }
+
+  // Legacy fallback — older JSON files don't have tokenised context.
   const fullContext = occurrence.fullContext || "";
   const target = occurrence.gemaraWord || "";
   const targetIndex = target ? fullContext.indexOf(target) : -1;
@@ -389,6 +553,30 @@ const renderOccurrenceContext = (occurrence: DisplayOccurrence) => {
   );
 };
 
+const renderSteinsaltzContext = (occurrence: DisplayOccurrence) => {
+  const tokens = occurrence.steinsaltzContextTokens;
+  if (tokens && tokens.length > 0) {
+    // Render with the same bold highlighting as daf-yomi.com.
+    return (
+      <>
+        {tokens.map((token, index) => (
+          <React.Fragment key={`stein-${index}`}>
+            {token.b ? (
+              <span className="font-black text-[#2D1B0E]">{token.t}</span>
+            ) : (
+              <span className="opacity-70">{token.t}</span>
+            )}
+            {index < tokens.length - 1 ? " " : null}
+          </React.Fragment>
+        ))}
+      </>
+    );
+  }
+
+  // Legacy fallback — plain text from older JSON files.
+  return <span className="opacity-70">{occurrence.steinsaltzContext}</span>;
+};
+
 const App = () => {
   const [results, setResults] = useState<WordEntry[]>([]);
   const [apiKeyInputs, setApiKeyInputs] = useState<string[]>([""]);
@@ -400,6 +588,7 @@ const App = () => {
   const [showPrompt, setShowPrompt] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("index");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef(false);
@@ -608,7 +797,9 @@ const App = () => {
   };
 
   const sortedResults = useMemo(() => {
-    const rows = results.map((entry, originalIndex) => ({ entry, originalIndex }));
+    const rows = results
+      .map((entry, originalIndex) => ({ entry, originalIndex }))
+      .filter(({ entry }) => entryMatchesFilters(entry, filters));
 
     rows.sort((left, right) => {
       let leftValue: string | number | boolean | null = left.originalIndex;
@@ -659,10 +850,12 @@ const App = () => {
     });
 
     return rows;
-  }, [results, sortDirection, sortKey]);
+  }, [results, sortDirection, sortKey, filters]);
 
   const handleExportCSV = () => {
-    const csvRows = results.map((entry) => {
+    // Export only what's currently visible (honours filters + sort order).
+    const visibleEntries = sortedResults.map((row) => row.entry);
+    const csvRows = visibleEntries.map((entry) => {
       const modelUsed = getEffectiveModelUsed(entry.ai_verification);
       const exactMatch = getExactMatchFlag(entry);
       return {
@@ -695,8 +888,10 @@ const App = () => {
   };
 
   const handleExportJSON = () => {
+    // Export only what's currently visible (honours filters + sort order).
+    const visibleEntries = sortedResults.map((row) => row.entry);
     const dataStr = JSON.stringify(
-      results.map(({ _status, ...rest }: WordEntry) => rest),
+      visibleEntries.map(({ _status, ...rest }: WordEntry) => rest),
       null,
       2
     );
@@ -781,7 +976,11 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-[#2D1B0E] font-sans">
-      <div className="max-w-7xl mx-auto p-4 md:p-8">
+      <div
+        className={`w-full max-w-[1600px] mx-auto p-4 md:p-8 transition-[padding] duration-300 ${
+          selectedWord ? "lg:pr-[640px]" : ""
+        }`}
+      >
         <header className="text-center mb-8 border-b-2 border-[#D4C3A3] pb-6">
           <h1 className="text-4xl md:text-5xl font-serif font-bold text-[#1F130B] mb-1 tracking-tight">
             מאגר ניקוד ארמי
@@ -931,7 +1130,11 @@ const App = () => {
                   <Layers className="w-4 h-4 text-[#C4A35A]" /> Table de Vérification
                 </span>
                 <span className="text-[10px] opacity-40 uppercase tracking-widest">
-                  {results.length} Mots
+                  {sortedResults.length}
+                  {sortedResults.length !== results.length
+                    ? ` / ${results.length}`
+                    : ""}{" "}
+                  Mots
                 </span>
               </div>
               <div className="overflow-auto flex-grow">
@@ -964,6 +1167,110 @@ const App = () => {
                             </button>
                           </th>
                         ))}
+                      </tr>
+                      <tr className="border-b border-[#D4C3A3] bg-[#FDFBF7]">
+                        <th className="px-2 py-1.5 text-center">
+                          {Object.values(filters).some((value) => value !== "") ? (
+                            <button
+                              onClick={() => setFilters(EMPTY_FILTERS)}
+                              title="Effacer tous les filtres"
+                              className="text-[9px] font-bold text-[#8B5E3C] opacity-60 hover:opacity-100"
+                            >
+                              ×
+                            </button>
+                          ) : null}
+                        </th>
+                        <th className="px-2 py-1.5">
+                          <input
+                            type="text"
+                            value={filters.word}
+                            onChange={(e) =>
+                              setFilters((prev) => ({ ...prev, word: e.target.value }))
+                            }
+                            placeholder="Filtrer…"
+                            dir="rtl"
+                            className="w-full text-xs px-2 py-1 border border-[#D4C3A3] rounded bg-white focus:outline-none focus:border-[#C4A35A]"
+                          />
+                        </th>
+                        <th className="px-2 py-1.5">
+                          <input
+                            type="text"
+                            value={filters.dictionary}
+                            onChange={(e) =>
+                              setFilters((prev) => ({ ...prev, dictionary: e.target.value }))
+                            }
+                            placeholder="Filtrer…"
+                            className="w-full text-xs px-2 py-1 border border-[#D4C3A3] rounded bg-white focus:outline-none focus:border-[#C4A35A]"
+                          />
+                        </th>
+                        <th className="px-2 py-1.5">
+                          <input
+                            type="text"
+                            value={filters.meaning}
+                            onChange={(e) =>
+                              setFilters((prev) => ({ ...prev, meaning: e.target.value }))
+                            }
+                            placeholder="Filtrer…"
+                            className="w-full text-xs px-2 py-1 border border-[#D4C3A3] rounded bg-white focus:outline-none focus:border-[#C4A35A]"
+                          />
+                        </th>
+                        <th className="px-2 py-1.5 text-center">
+                          <select
+                            value={filters.status}
+                            onChange={(e) =>
+                              setFilters((prev) => ({ ...prev, status: e.target.value }))
+                            }
+                            className="w-full text-[10px] px-1 py-1 border border-[#D4C3A3] rounded bg-white focus:outline-none focus:border-[#C4A35A]"
+                          >
+                            {STATUS_FILTER_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </th>
+                        <th className="px-2 py-1.5 text-center">
+                          <select
+                            value={filters.manual}
+                            onChange={(e) =>
+                              setFilters((prev) => ({ ...prev, manual: e.target.value }))
+                            }
+                            className="w-full text-[10px] px-1 py-1 border border-[#D4C3A3] rounded bg-white focus:outline-none focus:border-[#C4A35A]"
+                          >
+                            {MANUAL_FILTER_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </th>
+                        <th className="px-2 py-1.5 text-center">
+                          <select
+                            value={filters.exact}
+                            onChange={(e) =>
+                              setFilters((prev) => ({ ...prev, exact: e.target.value }))
+                            }
+                            className="w-full text-[10px] px-1 py-1 border border-[#D4C3A3] rounded bg-white focus:outline-none focus:border-[#C4A35A]"
+                          >
+                            {EXACT_FILTER_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </th>
+                        <th className="px-2 py-1.5">
+                          <input
+                            type="text"
+                            value={filters.correction}
+                            onChange={(e) =>
+                              setFilters((prev) => ({ ...prev, correction: e.target.value }))
+                            }
+                            placeholder="Filtrer…"
+                            dir="rtl"
+                            className="w-full text-xs px-2 py-1 border border-[#D4C3A3] rounded bg-white focus:outline-none focus:border-[#C4A35A]"
+                          />
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#D4C3A3]/20">
@@ -1071,12 +1378,19 @@ const App = () => {
       <AnimatePresence>
         {selectedWord && (
           <div className="fixed inset-0 z-50 pointer-events-none">
+            {/*
+             * On small screens: dim + blur the whole app behind the panel
+             *   so the user stays focused on the detail view.
+             * On large screens: no overlay — the main container pads itself
+             *   (lg:pr-[640px]) to leave room for the panel, so both are
+             *   visible at the same time.
+             */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setSelectedWordIdx(null)}
-              className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto"
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto lg:hidden"
             />
             <motion.div
               key="details-panel"
@@ -1099,7 +1413,7 @@ const App = () => {
                   </button>
                 </div>
                 <div className="flex justify-between items-baseline gap-3 mb-3">
-                  <p className="text-xs opacity-40 italic max-w-[45%] leading-relaxed">
+                  <p className="text-sm opacity-55 italic max-w-[45%] leading-relaxed">
                     « {selectedWord.french_meaning} »
                   </p>
                   <h3 className="font-serif text-2xl font-bold text-right" dir="rtl">
@@ -1138,7 +1452,7 @@ const App = () => {
                     <h4 className="text-[9px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5 text-[#8B5E3C]">
                       <BookOpen className="w-3 h-3" /> Dictionnaire
                     </h4>
-                    <div className="space-y-2 text-sm">
+                    <div className="space-y-2 text-base leading-relaxed">
                       <p><span className="font-bold">Requête :</span> {selectedWord.dictionary.query_used || "—"}</p>
                       <p><span className="font-bold">Définition :</span> {selectedWord.dictionary.meaning || "—"}</p>
                       <p>
@@ -1214,7 +1528,7 @@ const App = () => {
                       }
                       placeholder="Note libre pour cette entrée…"
                       rows={4}
-                      className="w-full py-2 px-3 rounded border border-[#D4C3A3] text-sm bg-[#FDFBF7] focus:outline-none focus:border-[#C4A35A] resize-y"
+                      className="w-full py-2 px-3 rounded border border-[#D4C3A3] text-base leading-relaxed bg-[#FDFBF7] focus:outline-none focus:border-[#C4A35A] resize-y"
                     />
                   </div>
                 </div>
@@ -1304,7 +1618,7 @@ const App = () => {
                         <h4 className="text-[9px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5 text-[#8B5E3C]">
                           <Info className="w-3 h-3" /> Analyse Grammaticale
                         </h4>
-                        <p className="text-sm leading-relaxed text-[#2D1B0E]">
+                        <p className="text-base leading-relaxed text-[#2D1B0E]">
                           {selectedWord.ai_verification.notes}
                         </p>
                       </div>
@@ -1442,13 +1756,13 @@ const App = () => {
                                     >
                                       {renderOccurrenceContext(occurrence)}
                                     </p>
-                                    {occurrence.steinsaltzContext && (
+                                    {(occurrence.steinsaltzContext ||
+                                      occurrence.steinsaltzContextTokens.length > 0) && (
                                       <p
-                                        className="text-right font-serif text-xs text-gray-400 italic mt-1 leading-relaxed"
+                                        className="text-right font-serif text-sm text-gray-600 mt-2 leading-relaxed border-t border-dashed border-[#D4C3A3]/40 pt-2"
                                         dir="rtl"
                                       >
-                                        {occurrence.steinsaltzContext.slice(0, 120)}
-                                        {occurrence.steinsaltzContext.length > 120 ? "…" : ""}
+                                        {renderSteinsaltzContext(occurrence)}
                                       </p>
                                     )}
                                   </div>
@@ -1518,13 +1832,13 @@ const App = () => {
                             >
                               {renderOccurrenceContext(occurrence)}
                             </p>
-                            {occurrence.steinsaltzContext && (
+                            {(occurrence.steinsaltzContext ||
+                              occurrence.steinsaltzContextTokens.length > 0) && (
                               <p
-                                className="text-right font-serif text-xs text-gray-400 italic mt-1 leading-relaxed"
+                                className="text-right font-serif text-sm text-gray-600 mt-2 leading-relaxed border-t border-dashed border-[#D4C3A3]/40 pt-2"
                                 dir="rtl"
                               >
-                                {occurrence.steinsaltzContext.slice(0, 120)}
-                                {occurrence.steinsaltzContext.length > 120 ? "…" : ""}
+                                {renderSteinsaltzContext(occurrence)}
                               </p>
                             )}
                           </div>

@@ -28,6 +28,15 @@ Two modes
       beyond the ones already present, appending them to gemara_pages.
       Skips pages already in the entry.
 
+  --mode fix-explanations
+      Re-fetches every Steinsaltz (vt=5) page and rebuilds the
+      Steinsaltz context so it actually covers the matched Gemara word
+      (span = first bold token → last bold token, with small padding).
+      Also stores per-token bold flags so the web UI can reproduce the
+      bold/highlight styling of daf-yomi.com, and upgrades each Gemara
+      occurrence to the new per-word shape (matched_positions + words
+      + full_context_tokens) — no more literal "…" in the display.
+
 Common behaviour
 ----------------
   • Never overwrites the input file — output is saved as <input>_patched.json,
@@ -42,6 +51,7 @@ Usage
   python patch_json.py all_flashcards_nikkud_data.json --mode fix-multi-words
   python patch_json.py all_flashcards_nikkud_data.json --mode more-sources
   python patch_json.py all_flashcards_nikkud_data.json --mode more-sources --max-extra 15
+  python patch_json.py all_flashcards_nikkud_data.json --mode fix-explanations
 """
 
 import argparse
@@ -224,20 +234,25 @@ def find_gemara_occurrences(
         end   = min(len(tokens), matched[-1] + context_size + 1)
         before = tokens[start : matched[0]]
         after  = tokens[matched[-1] + 1 : end]
-        is_consecutive = (matched[-1] - matched[0] == len(parts) - 1)
-        word_display   = (
-            " ".join(tokens[m] for m in matched)
-            if is_consecutive
-            else " … ".join(tokens[m] for m in matched)
-        )
+        full_tokens   = tokens[start:end]
+        matched_words = [tokens[m] for m in matched]
+        matched_positions = [m - start for m in matched]
+
+        # Space-joined — each word is highlighted individually by the UI via
+        # matched_positions, so we no longer need the literal "…" separator.
+        word_display = " ".join(matched_words)
+
         results.append({
-            "matched_indices": matched,
-            "word":         word_display,
-            "before":       before,
-            "after":        after,
-            "before_bases": [hebrew_only(t) for t in before],
-            "after_bases":  [hebrew_only(t) for t in after],
-            "full_context": " ".join(tokens[start:end]),
+            "matched_indices":     matched,
+            "word":                word_display,
+            "words":               matched_words,
+            "before":              before,
+            "after":               after,
+            "before_bases":        [hebrew_only(t) for t in before],
+            "after_bases":         [hebrew_only(t) for t in after],
+            "full_context":        " ".join(full_tokens),
+            "full_context_tokens": full_tokens,
+            "matched_positions":   matched_positions,
         })
     return results
 
@@ -296,9 +311,26 @@ def match_steinsaltz_to_gemara(
             continue
         ag.add(gi); ast.add(pos)
 
-        start = max(0, pos - context_size)
-        end   = min(len(stein_tagged), pos + context_size + 1)
-        win   = stein_tagged[start:end]
+        # Context spans from first bold to last bold token in the neighbourhood
+        # — so the matched word is actually visible, not cut off before the
+        # start or buried far after the end.
+        broad_start = max(0, pos - context_size)
+        broad_end   = min(len(stein_tagged), pos + context_size + 1)
+        broad       = stein_tagged[broad_start:broad_end]
+
+        bold_offsets = [i for i, t in enumerate(broad) if t["b"]]
+        if bold_offsets:
+            first_bold = broad_start + bold_offsets[0]
+            last_bold  = broad_start + bold_offsets[-1]
+            pad = 4
+            start = max(0, first_bold - pad)
+            end   = min(len(stein_tagged), last_bold + pad + 1)
+        else:
+            start = max(0, pos - context_size // 2)
+            end   = min(len(stein_tagged), pos + context_size // 2 + 1)
+
+        win    = stein_tagged[start:end]
+        pos_in = pos - start
 
         nearby = stein_tagged[pos : min(len(stein_tagged), pos + 10)]
         word_is_bold = any(
@@ -310,9 +342,11 @@ def match_steinsaltz_to_gemara(
             "steinsaltz_pos": pos,
             "word_is_bold":   word_is_bold,
             "match_score":    score,
-            "before": [t["t"] for t in win[:pos - start]],
-            "after":  [t["t"] for t in win[pos - start + 1:]],
+            "before": [t["t"] for t in win[:pos_in]],
+            "after":  [t["t"] for t in win[pos_in + 1:]],
             "full_context": " ".join(t["t"] for t in win),
+            # Bold-aware representation so the UI can mirror daf-yomi.com
+            "full_context_tokens": [{"t": t["t"], "b": t["b"]} for t in win],
         }
     return results
 
@@ -407,10 +441,13 @@ def fetch_page_occurrences(ref: dict, parts: list[str], occ_window: int) -> dict
     paired = [
         {
             "gemara": {
-                "word":         gocc["word"],
-                "before":       gocc["before"],
-                "after":        gocc["after"],
-                "full_context": gocc["full_context"],
+                "word":                gocc["word"],
+                "words":               gocc["words"],
+                "before":              gocc["before"],
+                "after":               gocc["after"],
+                "full_context":        gocc["full_context"],
+                "full_context_tokens": gocc["full_context_tokens"],
+                "matched_positions":   gocc["matched_positions"],
             },
             "steinsaltz": smatch,
         }
@@ -541,8 +578,130 @@ def more_sources(entries: list[dict], max_extra: int = 10) -> list[dict]:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Output file naming (never overwrite)
+# Mode 3: fix-explanations
 # ──────────────────────────────────────────────────────────────────────────────
+
+def _fix_gemara_occurrence_in_place(occ_gemara: dict, parts: list[str]) -> None:
+    """
+    Upgrade a gemara occurrence dict to include the new fields (`words`,
+    `full_context_tokens`, `matched_positions`) without refetching the page.
+
+    Only touches fields that are missing or empty — existing values are kept.
+    """
+    full_context = (occ_gemara.get("full_context") or "").strip()
+    tokens = full_context.split() if full_context else []
+
+    if "full_context_tokens" not in occ_gemara or not occ_gemara.get("full_context_tokens"):
+        occ_gemara["full_context_tokens"] = tokens
+
+    existing_word = occ_gemara.get("word", "") or ""
+    # Rebuild `words` from the existing display (splitting on space or …)
+    if "words" not in occ_gemara or not occ_gemara.get("words"):
+        raw_words = [
+            w for w in re.split(r"\s*(?:\u2026|\.\.\.|\s)\s*", existing_word) if w
+        ]
+        occ_gemara["words"] = raw_words
+
+    # Rebuild `matched_positions`: find each matched word inside tokens by
+    # matching consonants, starting from the expected first position.
+    if "matched_positions" not in occ_gemara or not occ_gemara.get("matched_positions"):
+        before_count = len(occ_gemara.get("before", []) or [])
+        positions: list[int] = []
+        cur = before_count
+        words = occ_gemara["words"]
+        for i, w in enumerate(words):
+            target = hebrew_only(w) or parts[i] if i < len(parts) else hebrew_only(w)
+            found = None
+            # Search forward from cur for a token whose consonants match.
+            for j in range(cur, len(tokens)):
+                if strip_nikkud(tokens[j]) == target:
+                    found = j; break
+            if found is None:
+                # Fall back to a sensible default so the UI still renders.
+                found = cur if cur < len(tokens) else max(0, len(tokens) - 1)
+            positions.append(found)
+            cur = found + 1
+        occ_gemara["matched_positions"] = positions
+
+    # Rewrite the display so it no longer contains the literal "…"
+    if "\u2026" in existing_word or "..." in existing_word:
+        occ_gemara["word"] = " ".join(occ_gemara["words"])
+
+
+def _refetch_steinsaltz_for_entry(entry: dict, parts: list[str]) -> None:
+    """
+    Re-fetch each Gemara page's Steinsaltz (vt=5) page, re-score and re-build
+    the context so it runs from the first bold token to the last bold token,
+    and store the bold-aware token list for rich rendering.
+
+    Existing Gemara occurrence metadata is preserved — we only replace the
+    `steinsaltz` sub-object of each occurrence.
+    """
+    for page in entry.get("gemara_pages", []):
+        # Build Gemara-occurrence dicts in the shape match_steinsaltz_to_gemara
+        # expects (it needs before_bases / after_bases for scoring).
+        gemara_occs = []
+        for occ in page.get("occurrences", []):
+            g = occ.get("gemara", {}) or {}
+            before = g.get("before", []) or []
+            after  = g.get("after",  []) or []
+            gemara_occs.append({
+                "before_bases": [hebrew_only(t) for t in before],
+                "after_bases":  [hebrew_only(t) for t in after],
+            })
+
+        if not gemara_occs:
+            continue
+
+        url_explain = page.get("url_explain")
+        page_id = page.get("page_id")
+        if not url_explain or not page_id:
+            continue
+
+        html_e   = get_cached(url_explain, f"p{page_id}_v5")
+        tagged_e = build_tagged_tokens(html_e)
+        matches  = match_steinsaltz_to_gemara(tagged_e, gemara_occs, parts)
+
+        for occ, smatch in zip(page["occurrences"], matches):
+            # Always upgrade the Gemara side to include the new fields
+            _fix_gemara_occurrence_in_place(occ.setdefault("gemara", {}), parts)
+            # Replace the Steinsaltz side with the freshly-computed one.
+            # If matching failed this time, keep the old value rather than
+            # wiping a previously-good match.
+            if smatch is not None:
+                occ["steinsaltz"] = smatch
+
+
+def fix_explanations(entries: list[dict]) -> list[dict]:
+    """
+    Walk every entry and repair the Steinsaltz explanations so they:
+      1. Actually cover the matched word (first-bold → last-bold span).
+      2. Include per-token bold flags, so the web UI can display them with
+         the same highlighting as daf-yomi.com.
+    Also upgrades each Gemara occurrence to the new shape (per-word
+    `words` / `matched_positions`) so the UI can highlight every matched
+    word individually — no more literal "…".
+    """
+    total = len(entries)
+    print(f"\nRe-fetching Steinsaltz explanations for {total} entries…")
+
+    for idx, entry in enumerate(entries):
+        word    = entry.get("word_with_nikkud", "")
+        meaning = entry.get("french_meaning", "")
+        parts   = get_query_parts(word)
+        if not parts:
+            continue
+
+        pages = entry.get("gemara_pages", [])
+        n_pages = len(pages)
+        print(f"\n[explain {idx + 1}/{total}] {word}  |  {meaning}  ({n_pages} page(s))")
+
+        _refetch_steinsaltz_for_entry(entry, parts)
+
+    return entries
+
+
+
 
 def get_next_filename(base_path: str) -> str:
     if not os.path.exists(base_path):
@@ -565,12 +724,16 @@ def main():
     parser.add_argument("json_file",
                         help="Path to the existing *_nikkud_data.json file")
     parser.add_argument("--mode", required=True,
-                        choices=["fix-multi-words", "more-sources"],
+                        choices=["fix-multi-words", "more-sources", "fix-explanations"],
                         help=(
                             "fix-multi-words: re-fetch pages for multi-word "
                             "non-ellipsis entries that were wrongly searched. "
                             "more-sources: add more Gemara pages to entries "
-                            "tagged manual_status=need_more_sources."
+                            "tagged manual_status=need_more_sources. "
+                            "fix-explanations: rebuild the Steinsaltz context "
+                            "around the matched word (first-bold → last-bold) "
+                            "and store bold flags per token so the UI can "
+                            "render like daf-yomi.com."
                         ))
     parser.add_argument("--max-extra", type=int, default=10,
                         help="[more-sources] Max new pages to add per entry (default: 10)")
@@ -600,6 +763,8 @@ def main():
             entries = fix_multi_words(entries)
         elif args.mode == "more-sources":
             entries = more_sources(entries, max_extra=args.max_extra)
+        elif args.mode == "fix-explanations":
+            entries = fix_explanations(entries)
     except KeyboardInterrupt:
         print("\n\nInterrupted — saving progress…")
 

@@ -9,9 +9,20 @@ export interface DictionaryInfo {
 export interface GemaraOccurrence {
   gemara: {
     word: string;
+    /** Each matched word (for multi-word entries like "X … Y"). */
+    words?: string[];
     before: string[];
     after: string[];
     full_context: string;
+    /**
+     * Tokenised context window — the UI uses this to highlight each matched
+     * word individually instead of rendering a literal "…".
+     */
+    full_context_tokens?: string[];
+    /**
+     * Indices inside `full_context_tokens` of each matched word.
+     */
+    matched_positions?: number[];
   };
   steinsaltz: {
     steinsaltz_pos: number;
@@ -20,6 +31,11 @@ export interface GemaraOccurrence {
     before: string[];
     after: string[];
     full_context: string;
+    /**
+     * Per-token bold flag, so the UI can reproduce the bold/highlight
+     * rendering of daf-yomi.com instead of a flat plain-text block.
+     */
+    full_context_tokens?: Array<{ t: string; b: boolean }>;
   } | null;
 }
 

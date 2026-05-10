@@ -234,16 +234,16 @@ def find_gemara_occurrences(
     Find every occurrence of `parts` (in order, within `window` tokens)
     in the Gemara nikkud page token list.
 
-    Returns list of:
-      {
-        "matched_indices": [i, j, ...],   # absolute positions of each part
-        "word":     "אַדְּהָכִי … וְהָכִי",
-        "before":   [...10 tokens...],    # with nikkud
-        "after":    [...10 tokens...],    # with nikkud
-        "before_bases": [...],            # consonants only, for scoring
-        "after_bases":  [...],
-        "full_context": "..."
-      }
+    Returns list of dicts with:
+      matched_indices: [i, j, ...]    (absolute positions of each part)
+      word:                combined display (space-joined for ellipsis too
+                           — the UI highlights each word individually)
+      words:               list of each matched word (with nikkud)
+      before / after:      tokens around the match
+      before_bases / after_bases: consonants-only versions, for scoring
+      full_context:        space-joined context string (for backward compat)
+      full_context_tokens: list of tokens in the context window
+      matched_positions:   indices WITHIN full_context_tokens of each matched word
     """
     tokens = [t["t"] for t in tagged]
     results = []
@@ -269,24 +269,26 @@ def find_gemara_occurrences(
 
         before_tokens = tokens[start : matched[0]]
         after_tokens  = tokens[matched[-1] + 1 : end]
+        full_tokens   = tokens[start:end]
+        matched_words = [tokens[m] for m in matched]
+        # matched positions inside full_context_tokens
+        matched_positions = [m - start for m in matched]
 
-        # Use a simple space when parts are consecutive (gap = len(parts)-1).
-        # Only use ' … ' when there are actual words between the parts (ellipsis entries).
-        is_consecutive = (matched[-1] - matched[0] == len(parts) - 1)
-        word_display   = (
-            " ".join(tokens[m] for m in matched)
-            if is_consecutive
-            else " … ".join(tokens[m] for m in matched)
-        )
+        # Space-joined display — with the new `matched_positions` field the UI
+        # can highlight each matched word individually (no more literal "…").
+        word_display = " ".join(matched_words)
 
         results.append({
-            "matched_indices": matched,
-            "word":         word_display,
-            "before":       before_tokens,
-            "after":        after_tokens,
-            "before_bases": [hebrew_only(t) for t in before_tokens],
-            "after_bases":  [hebrew_only(t) for t in after_tokens],
-            "full_context": " ".join(tokens[start:end]),
+            "matched_indices":     matched,
+            "word":                word_display,
+            "words":               matched_words,
+            "before":              before_tokens,
+            "after":               after_tokens,
+            "before_bases":        [hebrew_only(t) for t in before_tokens],
+            "after_bases":         [hebrew_only(t) for t in after_tokens],
+            "full_context":        " ".join(full_tokens),
+            "full_context_tokens": full_tokens,
+            "matched_positions":   matched_positions,
         })
 
     return results
@@ -368,14 +370,23 @@ def match_steinsaltz_to_gemara(
     Uses a greedy 1-to-1 matching: best score first, then each Steinsaltz
     position can only be assigned to one Gemara occurrence.
 
+    The returned context spans FROM the first bold token in the neighbourhood
+    TO the last bold token, with a small padding on each side.  This ensures
+    the explanation actually covers the matched word instead of stopping
+    before it or starting long before it.
+
     Returns a list (same length as gemara_occurrences) of dicts:
       {
-        "steinsaltz_pos": int,           # index in stein_tagged
+        "steinsaltz_pos": int,                 # index in stein_tagged
         "word_is_bold":   bool,
         "match_score":    float,
-        "before":         [...],         # tokens before in Steinsaltz
-        "after":          [...],         # tokens after in Steinsaltz
-        "full_context":   "..."
+        "before":         [...tokens...],
+        "after":          [...tokens...],
+        "full_context":   "space-joined string",  (legacy / plain version)
+        "full_context_tokens": [                  # NEW — lets the UI render
+          {"t": token, "b": is_bold},             #       bold like the site
+          ...
+        ],
       }
       or None if no match found.
     """
@@ -416,9 +427,31 @@ def match_steinsaltz_to_gemara(
         assigned_gemara.add(g_idx)
         assigned_stein.add(pos)
 
-        start = max(0, pos - context_size)
-        end   = min(len(stein_tagged), pos + context_size + 1)
-        win   = stein_tagged[start:end]
+        # Build the context so it actually covers the matched word.
+        # Strategy: scan a broad window around `pos`, find the first and last
+        # bold tokens, and use those as the boundaries (with small padding).
+        # This fixes the case where the old code returned 20 tokens BEFORE
+        # `pos`, often stopping right before the target word.
+        broad_start = max(0, pos - context_size)
+        broad_end   = min(len(stein_tagged), pos + context_size + 1)
+        broad       = stein_tagged[broad_start:broad_end]
+
+        bold_offsets = [i for i, t in enumerate(broad) if t["b"]]
+        if bold_offsets:
+            first_bold = broad_start + bold_offsets[0]
+            last_bold  = broad_start + bold_offsets[-1]
+            # Pad a few tokens on each side for readability, but stay within
+            # a reasonable slice so we don't dump the whole page.
+            pad = 4
+            start = max(0, first_bold - pad)
+            end   = min(len(stein_tagged), last_bold + pad + 1)
+        else:
+            # No bold found — fall back to a symmetric window around pos.
+            start = max(0, pos - context_size // 2)
+            end   = min(len(stein_tagged), pos + context_size // 2 + 1)
+
+        win     = stein_tagged[start:end]
+        pos_in  = pos - start
 
         # word_is_bold: is the matched position (or any of the subsequent
         # parts within 10 tokens) tagged bold?
@@ -432,9 +465,12 @@ def match_steinsaltz_to_gemara(
             "steinsaltz_pos": pos,
             "word_is_bold":   word_is_bold,
             "match_score":    score,
-            "before":         [t["t"] for t in win[:pos - start]],
-            "after":          [t["t"] for t in win[pos - start + 1:]],
+            "before":         [t["t"] for t in win[:pos_in]],
+            "after":          [t["t"] for t in win[pos_in + 1:]],
             "full_context":   " ".join(t["t"] for t in win),
+            # NEW: keep the bold flag per-token so the UI can reproduce the
+            # exact rendering of daf-yomi.com (highlighted quoted words).
+            "full_context_tokens": [{"t": t["t"], "b": t["b"]} for t in win],
         }
 
     return results
@@ -628,10 +664,13 @@ def process_word(word_nikkud: str, french_meaning: str) -> dict:
             for gocc, smatch in zip(gemara_occs, stein_matches):
                 paired.append({
                     "gemara": {
-                        "word":         gocc["word"],
-                        "before":       gocc["before"],
-                        "after":        gocc["after"],
-                        "full_context": gocc["full_context"],
+                        "word":                gocc["word"],
+                        "words":               gocc["words"],
+                        "before":              gocc["before"],
+                        "after":               gocc["after"],
+                        "full_context":        gocc["full_context"],
+                        "full_context_tokens": gocc["full_context_tokens"],
+                        "matched_positions":   gocc["matched_positions"],
                     },
                     "steinsaltz": smatch,   # None if no match found
                 })
