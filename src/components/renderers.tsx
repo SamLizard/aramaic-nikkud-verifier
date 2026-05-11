@@ -6,19 +6,44 @@ import { splitVisualClusters } from "../utils";
 const stripNikkud = (text: string): string =>
   (text || "").replace(/[\u0591-\u05C7]/g, "").trim();
 
-/** Highlight a plain-text word inside a string (nikkud-stripped comparison) */
+/**
+ * Build a Set of stripped word forms to match against.
+ * Handles multi-word base words (split by space) and gemaraWords arrays.
+ */
+const buildMatchSet = (baseWord?: string, gemaraWords?: string[]): Set<string> => {
+  const set = new Set<string>();
+  if (baseWord) {
+    // The base word itself (stripped)
+    const stripped = stripNikkud(baseWord);
+    if (stripped) set.add(stripped);
+    // If it contains spaces, also add each individual word
+    if (stripped.includes(" ")) {
+      for (const part of stripped.split(/\s+/)) {
+        if (part) set.add(part);
+      }
+    }
+  }
+  if (gemaraWords) {
+    for (const w of gemaraWords) {
+      const s = stripNikkud(w);
+      if (s) set.add(s);
+    }
+  }
+  return set;
+};
+
+/** Highlight words in plain text that match any of the target forms */
 const highlightWordInPlainText = (
   text: string,
-  strippedTarget: string
+  matchSet: Set<string>
 ): React.ReactNode => {
-  if (!strippedTarget) return <span className="opacity-70">{text}</span>;
+  if (matchSet.size === 0) return <span className="opacity-70">{text}</span>;
 
-  // Split text by spaces and check each token
   const words = text.split(" ");
   return (
     <>
       {words.map((word, i) => {
-        const isMatch = stripNikkud(word) === strippedTarget;
+        const isMatch = matchSet.has(stripNikkud(word));
         return (
           <React.Fragment key={i}>
             {isMatch ? (
@@ -148,15 +173,14 @@ export const renderSteinsaltzContext = (
   occurrence: DisplayOccurrence,
   baseWord?: string
 ) => {
+  const matchSet = buildMatchSet(baseWord, occurrence.gemaraWords);
   const tokens = occurrence.steinsaltzContextTokens;
   if (tokens && tokens.length > 0) {
-    // Strip nikkud from the target word to match against plain Steinsaltz tokens
-    const stripped = baseWord ? stripNikkud(baseWord) : "";
     return (
       <>
         {tokens.map((token, index) => {
           const isWordMatch =
-            stripped && stripNikkud(token.t) === stripped;
+            matchSet.size > 0 && matchSet.has(stripNikkud(token.t));
           return (
             <React.Fragment key={`stein-${index}`}>
               {isWordMatch ? (
@@ -177,11 +201,9 @@ export const renderSteinsaltzContext = (
   }
 
   // Legacy fallback — plain text from older JSON files.
-  // Try to highlight the word in the plain text
   const text = occurrence.steinsaltzContext || "";
-  if (baseWord && text) {
-    const stripped = stripNikkud(baseWord);
-    return highlightWordInPlainText(text, stripped);
+  if (matchSet.size > 0 && text) {
+    return highlightWordInPlainText(text, matchSet);
   }
   return <span className="opacity-70">{text}</span>;
 };

@@ -57,7 +57,7 @@ Pay attention that I don't want the components to go out of the screen.
 
 When the components are not below the table, I think that you can put it until almost the bottom.
 
-### Next Question
+### Question 9
 - Part 1
 Could you do that when we click "enter" or "esc" when I have a filter open, it closes the small tooltip (and stay with the filter like it is)?
 
@@ -75,3 +75,8 @@ Pay also attention that for the moment, when I am in a filter that is things to 
 
 - Part 4
 It stayed exacly the same. Maybe you should add logs, so I can paste them to you? Try also to fix, but maybe if it still don't work now, you will be able to understand it easily.
+
+### Question 10
+Thanks, I had to build before the npm run preview.
+
+About the highlight in the explanations, it works, but only when the think is one word. Could you make it work also when they are multiple words?
