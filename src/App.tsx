@@ -1,17 +1,11 @@
-import React, { useState, useCallback, useRef } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import type { WordEntry } from "./types";
-import {
-  rowsToCSV,
-  normalizeAiVerification,
-  getImportedNeedsAiRerun,
-  getImportedStatus,
-  normalizeKeyInputs,
-  getExactMatchFlag,
-  getEffectiveModelUsed,
-} from "./utils";
+import { normalizeKeyInputs } from "./utils";
 import { useProcessingQueue } from "./hooks/useProcessingQueue";
 import { useSortedResults } from "./hooks/useSortedResults";
+import { useExport } from "./hooks/useExport";
+import { useFileImport } from "./hooks/useFileImport";
 import VerificationTable from "./components/VerificationTable";
 import ControlsPanel from "./components/ControlsPanel";
 import WordDetailPanel from "./components/WordDetailPanel";
@@ -37,43 +31,13 @@ const App = () => {
   const { sortedResults, filters, setFilters, handleSort } =
     useSortedResults(results);
 
-  const handleFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const raw = JSON.parse(ev.target?.result as string);
-        const list: WordEntry[] = Array.isArray(raw) ? raw : [raw];
-        setResults(
-          list.map((entry) => {
-            const aiVerification = {
-              ...normalizeAiVerification(entry.ai_verification),
-              needs_ai_rerun: getImportedNeedsAiRerun(entry),
-            };
-            return {
-              ...entry,
-              ai_verification: aiVerification,
-              manual_status: entry.manual_status || null,
-              manual_note: entry.manual_note || "",
-              _status: getImportedStatus({
-                ...entry,
-                ai_verification: aiVerification,
-              }),
-            };
-          })
-        );
-        setStatusMsg(
-          `${list.length} mot${list.length > 1 ? "s" : ""} chargé${list.length > 1 ? "s" : ""}.`
-        );
-        setSelectedWordIdx(null);
-      } catch {
-        alert("Erreur de lecture JSON.");
-      }
-    };
-    reader.readAsText(file, "UTF-8");
-    e.target.value = "";
-  }, [setStatusMsg]);
+  const { handleExportCSV, handleExportJSON } = useExport(sortedResults);
+
+  const { handleFile } = useFileImport({
+    setResults,
+    setStatusMsg,
+    setSelectedWordIdx,
+  });
 
   const handleApiKeyChange = (index: number, value: string) => {
     setApiKeyInputs((prev) => {
@@ -90,57 +54,6 @@ const App = () => {
         index === selectedWordIdx ? updater(entry) : entry
       )
     );
-  };
-
-  const handleExportCSV = () => {
-    const visibleEntries = sortedResults.map((row) => row.entry);
-    const csvRows = visibleEntries.map((entry) => {
-      const modelUsed = getEffectiveModelUsed(entry.ai_verification);
-      const exactMatch = getExactMatchFlag(entry);
-      return {
-        "Mot (Nikkud)": entry.word_with_nikkud,
-        Dictionnaire: entry.dictionary?.meaning || "",
-        "Sens (Attendu)": entry.french_meaning,
-        "Correct?":
-          entry.ai_verification.nikkud_correct === true
-            ? "✓"
-            : entry.ai_verification.nikkud_correct === false
-              ? "✗"
-              : "?",
-        "Meme exact?":
-          exactMatch === null ? "-" : exactMatch ? "true" : "false",
-        Correction: entry.ai_verification.corrected_nikkud_word || "-",
-        Modele: modelUsed || "",
-        "Statut manuel": entry.manual_status || "",
-        "Note manuelle": entry.manual_note || "",
-        Notes: entry.ai_verification.notes || "",
-      };
-    });
-
-    const csv = rowsToCSV(csvRows);
-    const blob = new Blob(["\uFEFF" + csv], {
-      type: "text/csv;charset=utf-8",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "nikkud_rapport.csv";
-    a.click();
-  };
-
-  const handleExportJSON = () => {
-    const visibleEntries = sortedResults.map((row) => row.entry);
-    const dataStr = JSON.stringify(
-      visibleEntries.map(({ _status, ...rest }: WordEntry) => rest),
-      null,
-      2
-    );
-    const blob = new Blob([dataStr], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "nikkud_enrichi.json";
-    a.click();
   };
 
   const selectedWord =
