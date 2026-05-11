@@ -2,6 +2,40 @@ import React from "react";
 import type { DisplayOccurrence } from "../types";
 import { splitVisualClusters } from "../utils";
 
+/** Strip all Hebrew nikkud/cantillation marks from a string */
+const stripNikkud = (text: string): string =>
+  (text || "").replace(/[\u0591-\u05C7]/g, "").trim();
+
+/** Highlight a plain-text word inside a string (nikkud-stripped comparison) */
+const highlightWordInPlainText = (
+  text: string,
+  strippedTarget: string
+): React.ReactNode => {
+  if (!strippedTarget) return <span className="opacity-70">{text}</span>;
+
+  // Split text by spaces and check each token
+  const words = text.split(" ");
+  return (
+    <>
+      {words.map((word, i) => {
+        const isMatch = stripNikkud(word) === strippedTarget;
+        return (
+          <React.Fragment key={i}>
+            {isMatch ? (
+              <span className="font-black text-[#8B5E3C] bg-amber-50 px-0.5 rounded border-b border-[#C4A35A]">
+                {word}
+              </span>
+            ) : (
+              <span className="opacity-70">{word}</span>
+            )}
+            {i < words.length - 1 ? " " : null}
+          </React.Fragment>
+        );
+      })}
+    </>
+  );
+};
+
 /**
  * Renders a Hebrew word with per-cluster diff highlighting against another word.
  */
@@ -107,27 +141,47 @@ export const renderOccurrenceContext = (occurrence: DisplayOccurrence) => {
 };
 
 /**
- * Renders the Steinsaltz context with bold highlighting.
+ * Renders the Steinsaltz context with bold highlighting AND highlights the
+ * target word (without nikkud) so the user can spot it in the explanation.
  */
-export const renderSteinsaltzContext = (occurrence: DisplayOccurrence) => {
+export const renderSteinsaltzContext = (
+  occurrence: DisplayOccurrence,
+  baseWord?: string
+) => {
   const tokens = occurrence.steinsaltzContextTokens;
   if (tokens && tokens.length > 0) {
+    // Strip nikkud from the target word to match against plain Steinsaltz tokens
+    const stripped = baseWord ? stripNikkud(baseWord) : "";
     return (
       <>
-        {tokens.map((token, index) => (
-          <React.Fragment key={`stein-${index}`}>
-            {token.b ? (
-              <span className="font-black text-[#2D1B0E]">{token.t}</span>
-            ) : (
-              <span className="opacity-70">{token.t}</span>
-            )}
-            {index < tokens.length - 1 ? " " : null}
-          </React.Fragment>
-        ))}
+        {tokens.map((token, index) => {
+          const isWordMatch =
+            stripped && stripNikkud(token.t) === stripped;
+          return (
+            <React.Fragment key={`stein-${index}`}>
+              {isWordMatch ? (
+                <span className="font-black text-[#8B5E3C] bg-amber-50 px-0.5 rounded border-b border-[#C4A35A]">
+                  {token.t}
+                </span>
+              ) : token.b ? (
+                <span className="font-black text-[#2D1B0E]">{token.t}</span>
+              ) : (
+                <span className="opacity-70">{token.t}</span>
+              )}
+              {index < tokens.length - 1 ? " " : null}
+            </React.Fragment>
+          );
+        })}
       </>
     );
   }
 
   // Legacy fallback — plain text from older JSON files.
-  return <span className="opacity-70">{occurrence.steinsaltzContext}</span>;
+  // Try to highlight the word in the plain text
+  const text = occurrence.steinsaltzContext || "";
+  if (baseWord && text) {
+    const stripped = stripNikkud(baseWord);
+    return highlightWordInPlainText(text, stripped);
+  }
+  return <span className="opacity-70">{text}</span>;
 };

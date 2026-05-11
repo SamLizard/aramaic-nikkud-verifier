@@ -46,7 +46,7 @@ const VerificationTable: React.FC<VerificationTableProps> = ({
     Object.values(filters.correction).some((v) => v !== null);
 
   return (
-    <div className="bg-white border border-[#D4C3A3] rounded-lg shadow-sm overflow-hidden flex flex-col h-[65vh]">
+    <div className="bg-white border border-[#D4C3A3] rounded-lg shadow-sm overflow-hidden flex flex-col h-full">
       <div className="bg-[#1F130B] px-4 py-2.5 text-[#FDFBF7] flex justify-between items-center shrink-0">
         <span className="flex items-center gap-2 font-serif text-sm">
           <Layers className="w-4 h-4 text-[#C4A35A]" /> Table de Vérification

@@ -45,7 +45,33 @@ I would like the things that were at left (and where moved to bottom) to be at l
 If they are things that I didn't tell you exactly how to implement, think UX.
 Pay attention to standards. Don't write more than 200-300 lines of code in the same file if you can split.
 
-### Next question
+### Question 7
 The highlight is not working. Pay attention that the explanation text is without nikkud. I just want to have it highlighted so I know it is here (then I can read the explanation before/after). The explanation part I am talking about is the one displayed in each source, after the nikkud part.
 The filter (of the column with nikkud word - two first columns) should also work if I write without nikkud.
 Remove the margin between the table and the components displayed below it (when panel is open).
+
+### Question 8
+I think it is the flex-1 on the table that is putting the other components at the bottom of the screen. If it must be at bottom, make the table be with more rows, until it is with just a little margin with the bottom components.
+
+Pay attention that I don't want the components to go out of the screen.
+
+When the components are not below the table, I think that you can put it until almost the bottom.
+
+### Next Question
+- Part 1
+Could you do that when we click "enter" or "esc" when I have a filter open, it closes the small tooltip (and stay with the filter like it is)?
+
+- Part 2
+Both are still not working
+
+- Part 3
+It is still not working. i don't see errors in the console.
+
+Maybe search on the internet how you should do it?
+
+Just remember, I open the filter tooltip, then start to write / choose things, then I should be able to press enter/esc and it closes the filter tooltip and stay with the filter applied. 
+
+Pay also attention that for the moment, when I am in a filter that is things to choose, it works if this time I opened it I didn't do any click (on some option). If I did, it make it be the next step (Clic: inclure → exclure → rien) when I press enter. Esc isn't doing anything in both states. When I closed with a "enter", then if I redo "enter", it reopens it. You can let the reopen I you want.
+
+- Part 4
+It stayed exacly the same. Maybe you should add logs, so I can paste them to you? Try also to fix, but maybe if it still don't work now, you will be able to understand it easily.

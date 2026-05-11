@@ -249,8 +249,11 @@ describe("entryMatchesFilters", () => {
 
   it("filters by word text", () => {
     const entry = makeEntry({ word_with_nikkud: "שָׁלוֹם" });
-    expect(entryMatchesFilters(entry, { ...EMPTY_FILTERS, word: "שלום" })).toBe(false);
+    // Searching without nikkud should match (nikkud-insensitive)
+    expect(entryMatchesFilters(entry, { ...EMPTY_FILTERS, word: "שלום" })).toBe(true);
     expect(entryMatchesFilters(entry, { ...EMPTY_FILTERS, word: "שָׁלוֹם" })).toBe(true);
+    // Non-matching text should not match
+    expect(entryMatchesFilters(entry, { ...EMPTY_FILTERS, word: "אמר" })).toBe(false);
   });
 
   it("filters by status", () => {

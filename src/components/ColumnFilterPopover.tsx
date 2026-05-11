@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Filter, X } from "lucide-react";
 
 // ─── Tri-state: null = no filter, "include" = show only, "exclude" = hide ───
@@ -40,6 +40,9 @@ const ColumnFilterPopover: React.FC<ColumnFilterPopoverProps> = ({
       ? Boolean(textValue)
       : Object.values(selections).some((v) => v !== null);
 
+  const close = useCallback(() => setOpen(false), []);
+
+  // Close on outside click
   useEffect(() => {
     if (!open) return;
     const handleClickOutside = (e: MouseEvent) => {
@@ -49,12 +52,53 @@ const ColumnFilterPopover: React.FC<ColumnFilterPopoverProps> = ({
         buttonRef.current &&
         !buttonRef.current.contains(e.target as Node)
       ) {
-        setOpen(false);
+        close();
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [open]);
+  }, [open, close]);
+
+  // Close on Escape/Enter — attach to the popover element directly
+  useEffect(() => {
+    if (!open) return;
+    const el = popoverRef.current;
+    if (!el) {
+      return;
+    }
+
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape" || e.key === "Enter") {
+        e.preventDefault();
+        e.stopPropagation();
+        close();
+      }
+    };
+
+    // Use capture phase on the popover element itself
+    el.addEventListener("keydown", handler, true);
+    return () => el.removeEventListener("keydown", handler, true);
+  }, [open, close]);
+
+  // Also listen on document as a fallback
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape" || e.key === "Enter") {
+        // Only close if focus is inside the popover or on the trigger button
+        const active = document.activeElement;
+        const insidePopover = popoverRef.current?.contains(active);
+        const isButton = buttonRef.current?.contains(active);
+        if (insidePopover || isButton) {
+          e.preventDefault();
+          e.stopPropagation();
+          close();
+        }
+      }
+    };
+    document.addEventListener("keydown", handler, true);
+    return () => document.removeEventListener("keydown", handler, true);
+  }, [open, close]);
 
   const cycleOption = (value: string) => {
     const current = selections[value] || null;
@@ -98,7 +142,8 @@ const ColumnFilterPopover: React.FC<ColumnFilterPopoverProps> = ({
       {open && (
         <div
           ref={popoverRef}
-          className="absolute top-full left-1/2 -translate-x-1/2 mt-1 z-50 bg-white border border-[#D4C3A3] rounded-lg shadow-lg min-w-[160px] py-1"
+          tabIndex={-1}
+          className="absolute top-full left-1/2 -translate-x-1/2 mt-1 z-50 bg-white border border-[#D4C3A3] rounded-lg shadow-lg min-w-[160px] py-1 outline-none"
           onClick={(e) => e.stopPropagation()}
         >
           {hasActiveFilter && (
@@ -154,7 +199,7 @@ const ColumnFilterPopover: React.FC<ColumnFilterPopoverProps> = ({
             <p className="text-[8px] text-gray-400 italic">
               {mode === "options"
                 ? "Clic: inclure → exclure → rien"
-                : "Tapez pour filtrer"}
+                : "Enter/Esc pour fermer"}
             </p>
           </div>
         </div>

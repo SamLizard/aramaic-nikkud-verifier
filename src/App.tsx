@@ -92,8 +92,8 @@ const App = () => {
       )}
 
       {/* Main content area */}
-      <div className="flex-1 min-w-0 py-3 px-4 md:px-6 flex flex-col">
-        <header className="text-center mb-4 border-b border-[#D4C3A3] pb-3">
+      <div className="flex-1 min-w-0 py-3 px-4 md:px-6 flex flex-col h-screen overflow-hidden">
+        <header className="text-center mb-2 border-b border-[#D4C3A3] pb-2 shrink-0">
           <h1 className="text-3xl md:text-4xl font-serif font-bold text-[#1F130B] mb-0.5 tracking-tight">
             מאגר ניקוד ארמי
           </h1>
@@ -123,7 +123,7 @@ const App = () => {
         />
 
         {/* Bottom controls — visible on mobile always, or on desktop when panel is open */}
-        <div className={`mt-3 ${!panelOpen ? "lg:hidden" : ""}`}>
+        <div className={`shrink-0 pt-2 ${!panelOpen ? "lg:hidden" : ""}`}>
           <ControlsPanel
             layout="horizontal"
             apiKeyInputs={apiKeyInputs}

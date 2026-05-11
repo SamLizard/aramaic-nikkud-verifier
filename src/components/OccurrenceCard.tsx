@@ -6,9 +6,10 @@ import { renderOccurrenceContext, renderSteinsaltzContext } from "./renderers";
 interface OccurrenceCardProps {
   occurrence: DisplayOccurrence;
   dictionaryNikkudWord: string | null;
+  baseWord?: string;
 }
 
-const OccurrenceCard: React.FC<OccurrenceCardProps> = ({ occurrence, dictionaryNikkudWord }) => (
+const OccurrenceCard: React.FC<OccurrenceCardProps> = ({ occurrence, dictionaryNikkudWord, baseWord }) => (
   <div className="border border-[#D4C3A3] rounded-lg overflow-hidden bg-white">
     <div className="flex justify-between items-center bg-[#F6F1E6] px-3 py-2 border-b border-[#D4C3A3]/40">
       <div className="flex items-center gap-2">
@@ -37,7 +38,7 @@ const OccurrenceCard: React.FC<OccurrenceCardProps> = ({ occurrence, dictionaryN
           className="text-right font-serif text-sm text-gray-600 mt-2 leading-relaxed border-t border-dashed border-[#D4C3A3]/40 pt-2"
           dir="rtl"
         >
-          {renderSteinsaltzContext(occurrence)}
+          {renderSteinsaltzContext(occurrence, baseWord)}
         </p>
       )}
     </div>

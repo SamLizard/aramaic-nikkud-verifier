@@ -1,9 +1,14 @@
 import React from "react";
 import type { WordEntry } from "../types";
 
+/** Strip all Hebrew nikkud/cantillation marks */
+const stripNikkud = (text: string): string =>
+  (text || "").replace(/[\u0591-\u05C7]/g, "");
+
 /**
  * Highlights occurrences of the word (with or without nikkud) in the given text.
- * Matches: word_with_nikkud, base_consonants, and corrected_nikkud_word.
+ * Matches: word_with_nikkud, base_consonants, corrected_nikkud_word,
+ * and their nikkud-stripped forms.
  */
 export const highlightWordInText = (
   text: string,
@@ -16,8 +21,10 @@ export const highlightWordInText = (
   if (word.ai_verification.corrected_nikkud_word) {
     targets.push(word.ai_verification.corrected_nikkud_word);
   }
+  // Also add stripped versions
+  targets.push(...targets.map(stripNikkud));
 
-  // Deduplicate and sort by length (longest first for greedy matching)
+  // Deduplicate, remove empty, sort by length (longest first for greedy matching)
   const unique = [...new Set(targets)].filter(Boolean).sort((a, b) => b.length - a.length);
 
   if (unique.length === 0) return text;

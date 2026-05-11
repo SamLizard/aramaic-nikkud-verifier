@@ -4,6 +4,11 @@ import { MANUAL_STATUS_OPTIONS } from "../constants";
 import { getExactMatchFlag } from "./status";
 import { countCorrectionChanges } from "./hebrew";
 
+// ─── Nikkud stripping for filter matching ────────────────────────────────────
+
+const stripNikkud = (text: string): string =>
+  (text || "").replace(/[\u0591-\u05C7]/g, "");
+
 // ─── Filter value extractors ─────────────────────────────────────────────────
 
 export const getStatusFilterValue = (entry: WordEntry): string => {
@@ -32,7 +37,12 @@ export const getCorrectionFilterValue = (entry: WordEntry): string => {
 
 export const matchesTextFilter = (haystack: string, needle: string): boolean => {
   if (!needle) return true;
-  return haystack.toLowerCase().includes(needle.toLowerCase());
+  const lowerNeedle = needle.toLowerCase();
+  // Match with nikkud or without nikkud (so user can type plain consonants)
+  return (
+    haystack.toLowerCase().includes(lowerNeedle) ||
+    stripNikkud(haystack).toLowerCase().includes(lowerNeedle)
+  );
 };
 
 export const getManualStatusOption = (status?: ManualStatus | null) =>

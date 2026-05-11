@@ -112,6 +112,7 @@ const OccurrenceList: React.FC<OccurrenceListProps> = ({ word }) => {
                       key={`${group.key}-${occurrence.pageLabel}-${occurrenceIndex}`}
                       occurrence={occurrence}
                       dictionaryNikkudWord={dictionaryNikkudWord}
+                      baseWord={word.base_consonants}
                     />
                   ))}
                 </div>
@@ -126,6 +127,7 @@ const OccurrenceList: React.FC<OccurrenceListProps> = ({ word }) => {
               key={`${occurrence.pageLabel}-${occurrenceIndex}`}
               occurrence={occurrence}
               dictionaryNikkudWord={dictionaryNikkudWord}
+              baseWord={word.base_consonants}
             />
           ))}
         </div>
