@@ -81,3 +81,19 @@ export interface WordEntry {
   // Local UI status
   _status?: "pending" | "processing" | "done" | "error";
 }
+
+export interface DisplayOccurrence {
+  pageLabel: string;
+  urlNikud: string;
+  urlExplain: string;
+  occurrenceIndex: number;
+  gemaraWord: string;
+  gemaraWords: string[];
+  fullContext: string;
+  fullContextTokens: string[];
+  matchedPositions: number[];
+  before: string[];
+  after: string[];
+  steinsaltzContext: string;
+  steinsaltzContextTokens: Array<{ t: string; b: boolean }>;
+}

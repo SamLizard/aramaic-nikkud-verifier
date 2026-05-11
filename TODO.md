@@ -36,3 +36,9 @@ No. The panel is still overload. I don't want an overload. I want it to take pla
 ## 11/05/2026
 ### Question 5
 Thanks, but it still shrinks the table a little bit (1 column is hidden). Could you put the left things at the bottom of the table (when needed), so we have more place
+
+### Next question
+I would like the word in the explanation to also be highlighted.
+I would like (if possible) the filter of a column to be display only when clicking some icon displayed in the column header. And it should be displayed like in a tooltip or something like this. 
+I would like to be able (when selecting options in a filter) to selected multiple of them, or when I click the second time to select NOT this option, and the third time to stop filtering by this thing.
+I would like the things that were at left (and where moved to bottom) to be at left until we open the panel, and just then, put them at bottom. I think that we can also reduce a little bit the height used in all the website, so it is not too much at bottom.
