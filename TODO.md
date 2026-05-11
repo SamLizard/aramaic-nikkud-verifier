@@ -32,3 +32,7 @@ Thanks. But my meaning was that the panel takes place in the screen, but not by 
 
 ### Question 4
 No. The panel is still overload. I don't want an overload. I want it to take place from the screen itself.
+
+## 11/05/2026
+### Question 5
+Thanks, but it still shrinks the table a little bit (1 column is hidden). Could you put the left things at the bottom of the table (when needed), so we have more place
