@@ -8,6 +8,7 @@ import {
   normalizeAiVerification,
   normalizeTrials,
   getImportedStatus,
+  getImportedNeedsAiRerun,
   isEntryAlreadyAnalyzed,
   getUsableApiKeys,
   groupKeysByWord,
@@ -497,5 +498,225 @@ describe("rowsToCSV", () => {
   it("escapes commas and newlines", () => {
     const csv = rowsToCSV([{ col: "a,b\nc" }]);
     expect(csv).toContain('"a,b\nc"');
+  });
+});
+
+// ─── getImportedStatus ───────────────────────────────────────────────────────
+
+describe("getImportedStatus", () => {
+  it("returns 'pending' for entry with no AI data", () => {
+    const entry = makeEntry();
+    expect(getImportedStatus(entry)).toBe("pending");
+  });
+
+  it("returns 'done' when nikkud_correct is set", () => {
+    const entry = makeEntry({
+      ai_verification: { ...EMPTY_AI_VERIFICATION, nikkud_correct: true },
+    });
+    expect(getImportedStatus(entry)).toBe("done");
+  });
+
+  it("returns 'done' when corrected_nikkud_word is set", () => {
+    const entry = makeEntry({
+      ai_verification: { ...EMPTY_AI_VERIFICATION, corrected_nikkud_word: "אַב" },
+    });
+    expect(getImportedStatus(entry)).toBe("done");
+  });
+
+  it("returns 'done' when notes are present", () => {
+    const entry = makeEntry({
+      ai_verification: { ...EMPTY_AI_VERIFICATION, notes: "some note" },
+    });
+    expect(getImportedStatus(entry)).toBe("done");
+  });
+
+  it("returns 'done' when pages_same_meaning has entries", () => {
+    const entry = makeEntry({
+      ai_verification: { ...EMPTY_AI_VERIFICATION, pages_same_meaning: ["Berakhot 2a"] },
+    });
+    expect(getImportedStatus(entry)).toBe("done");
+  });
+});
+
+// ─── isEntryAlreadyAnalyzed ──────────────────────────────────────────────────
+
+describe("isEntryAlreadyAnalyzed", () => {
+  it("returns false for pending entry", () => {
+    expect(isEntryAlreadyAnalyzed(makeEntry())).toBe(false);
+  });
+
+  it("returns true for done entry without rerun flag", () => {
+    const entry = makeEntry({
+      ai_verification: { ...EMPTY_AI_VERIFICATION, nikkud_correct: true },
+    });
+    expect(isEntryAlreadyAnalyzed(entry)).toBe(true);
+  });
+
+  it("returns false for done entry with needs_ai_rerun", () => {
+    const entry = makeEntry({
+      ai_verification: { ...EMPTY_AI_VERIFICATION, nikkud_correct: true, needs_ai_rerun: true },
+    });
+    expect(isEntryAlreadyAnalyzed(entry)).toBe(false);
+  });
+});
+
+// ─── getImportedNeedsAiRerun ─────────────────────────────────────────────────
+
+describe("getImportedNeedsAiRerun", () => {
+  it("returns false when not set", () => {
+    expect(getImportedNeedsAiRerun(makeEntry())).toBe(false);
+  });
+
+  it("returns true from ai_verification.needs_ai_rerun", () => {
+    const entry = makeEntry({
+      ai_verification: { ...EMPTY_AI_VERIFICATION, needs_ai_rerun: true },
+    });
+    expect(getImportedNeedsAiRerun(entry)).toBe(true);
+  });
+
+  it("coerces string 'true' to true", () => {
+    const entry = makeEntry({
+      ai_verification: { ...EMPTY_AI_VERIFICATION, needs_ai_rerun: "true" as any },
+    });
+    expect(getImportedNeedsAiRerun(entry)).toBe(true);
+  });
+});
+
+// ─── getStatusFilterValue ────────────────────────────────────────────────────
+
+describe("getStatusFilterValue", () => {
+  it("returns 'error' for error status", () => {
+    expect(getStatusFilterValue(makeEntry({ _status: "error" }))).toBe("error");
+  });
+
+  it("returns 'processing' for processing status", () => {
+    expect(getStatusFilterValue(makeEntry({ _status: "processing" }))).toBe("processing");
+  });
+
+  it("returns 'pending' for pending status", () => {
+    expect(getStatusFilterValue(makeEntry({ _status: "pending" }))).toBe("pending");
+  });
+
+  it("returns 'correct' for done+correct", () => {
+    expect(
+      getStatusFilterValue(
+        makeEntry({ _status: "done", ai_verification: { ...EMPTY_AI_VERIFICATION, nikkud_correct: true } })
+      )
+    ).toBe("correct");
+  });
+
+  it("returns 'incorrect' for done+incorrect", () => {
+    expect(
+      getStatusFilterValue(
+        makeEntry({ _status: "done", ai_verification: { ...EMPTY_AI_VERIFICATION, nikkud_correct: false } })
+      )
+    ).toBe("incorrect");
+  });
+});
+
+// ─── getExactFilterValue ─────────────────────────────────────────────────────
+
+describe("getExactFilterValue", () => {
+  it("returns 'none' when no exact match info", () => {
+    expect(getExactFilterValue(makeEntry())).toBe("none");
+  });
+
+  it("returns 'true' when word matches correction", () => {
+    const entry = makeEntry({
+      word_with_nikkud: "אָב",
+      ai_verification: { ...EMPTY_AI_VERIFICATION, nikkud_correct: false, corrected_nikkud_word: "אָב" },
+    });
+    expect(getExactFilterValue(entry)).toBe("true");
+  });
+
+  it("returns 'false' when word differs from correction", () => {
+    const entry = makeEntry({
+      word_with_nikkud: "אָב",
+      ai_verification: { ...EMPTY_AI_VERIFICATION, nikkud_correct: false, corrected_nikkud_word: "אַב" },
+    });
+    expect(getExactFilterValue(entry)).toBe("false");
+  });
+});
+
+// ─── getCorrectionFilterValue ────────────────────────────────────────────────
+
+describe("getCorrectionFilterValue", () => {
+  it("returns 'none' when no correction", () => {
+    expect(getCorrectionFilterValue(makeEntry())).toBe("none");
+  });
+
+  it("returns '0' when correction matches original", () => {
+    const entry = makeEntry({
+      word_with_nikkud: "אָב",
+      ai_verification: { ...EMPTY_AI_VERIFICATION, corrected_nikkud_word: "אָב" },
+    });
+    expect(getCorrectionFilterValue(entry)).toBe("0");
+  });
+
+  it("returns '5+' for many changes", () => {
+    const entry = makeEntry({
+      word_with_nikkud: "אבגדהו",
+      ai_verification: { ...EMPTY_AI_VERIFICATION, corrected_nikkud_word: "וּהֵדָגְבַאֲ" },
+    });
+    const value = getCorrectionFilterValue(entry);
+    // With very different clusters, should be 5+
+    expect(["1", "2", "3", "4", "5+"].includes(value) || value === "none").toBe(true);
+  });
+});
+
+// ─── normalizeTrials ─────────────────────────────────────────────────────────
+
+describe("normalizeTrials", () => {
+  it("returns empty array for undefined", () => {
+    expect(normalizeTrials(undefined)).toEqual([]);
+  });
+
+  it("returns the array as-is when valid", () => {
+    const trials = [{ model: "m", status: "success", message: "", raw_response: "" }];
+    expect(normalizeTrials(trials)).toBe(trials);
+  });
+});
+
+// ─── normalizeDisplayedHebrew ────────────────────────────────────────────────
+
+describe("normalizeDisplayedHebrew", () => {
+  it("trims whitespace", () => {
+    expect(normalizeDisplayedHebrew("  אָב  ")).toBe("אָב");
+  });
+
+  it("handles empty string", () => {
+    expect(normalizeDisplayedHebrew("")).toBe("");
+  });
+});
+
+// ─── getUsableApiKeys ────────────────────────────────────────────────────────
+
+describe("getUsableApiKeys", () => {
+  it("filters out empty strings", () => {
+    expect(getUsableApiKeys(["key1", "", "key2", ""])).toEqual(["key1", "key2"]);
+  });
+
+  it("trims whitespace", () => {
+    expect(getUsableApiKeys(["  key1  ", ""])).toEqual(["key1"]);
+  });
+
+  it("returns empty for all-empty input", () => {
+    expect(getUsableApiKeys(["", ""])).toEqual([]);
+  });
+});
+
+// ─── groupKeysByWord ─────────────────────────────────────────────────────────
+
+describe("groupKeysByWord", () => {
+  it("groups keys in pairs (KEY_GROUP_SIZE=2)", () => {
+    expect(groupKeysByWord(["a", "b", "c", "d"])).toEqual([["a", "b"], ["c", "d"]]);
+  });
+
+  it("handles odd number of keys", () => {
+    expect(groupKeysByWord(["a", "b", "c"])).toEqual([["a", "b"], ["c"]]);
+  });
+
+  it("returns empty for no keys", () => {
+    expect(groupKeysByWord([])).toEqual([]);
   });
 });

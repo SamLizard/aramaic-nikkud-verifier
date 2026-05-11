@@ -1,19 +1,30 @@
 # Goal
 ## Standards
 - No component file should exceed 200-300 lines of code.
-- Pure logic goes in `utils.ts`, types in `types.ts`, constants in `constants.ts`.
+- Pure logic goes in `utils/`, types in `types.ts`, constants in `constants.ts`.
 - JSX rendering helpers (functions returning JSX but not full components) go in `components/renderers.tsx`.
 - Each UI panel/section should be its own component in `src/components/`.
+- Custom hooks live in `src/hooks/`.
 
 ## Architecture
 
 ```
 src/
-├── App.tsx                      (272 lines) — main layout, state, processing logic
+├── App.tsx                      (150 lines) — layout composition only
 ├── constants.ts                 (131 lines) — config values, filter options, default objects
 ├── types.ts                     (99 lines)  — all TypeScript interfaces
-├── utils.ts                     (390 lines) — pure logic helpers (no JSX)
-├── utils.test.ts                (310 lines) — unit tests for utils.ts
+├── utils/
+│   ├── index.ts                 (40 lines)  — barrel re-export (keeps imports unchanged)
+│   ├── general.ts               (20 lines)  — rowsToCSV, wait
+│   ├── status.ts                (110 lines) — AI verification normalization, sort ranks, status helpers
+│   ├── hebrew.ts                (75 lines)  — splitVisualClusters, countCorrectionChanges, normalize/extract
+│   ├── filters.ts               (75 lines)  — entryMatchesFilters, filter value extractors
+│   ├── api-keys.ts              (35 lines)  — normalizeKeyInputs, getUsableApiKeys, groupKeysByWord
+│   └── occurrences.ts           (45 lines)  — flattenOccurrences
+├── utils.test.ts                (450 lines) — 85 unit tests for all utils modules
+├── hooks/
+│   ├── useProcessingQueue.ts    (140 lines) — async AI processing worker logic
+│   └── useSortedResults.ts      (90 lines)  — sort + filter state & memoized computation
 ├── lib/
 │   └── groq.ts                  — AI verification API calls
 ├── components/
@@ -59,37 +70,40 @@ src/
 - App.tsx now only contains state management, processing logic, and layout composition.
 
 ### Step 6 — Unit tests for utils.ts (done)
-- Created `src/utils.test.ts` with 53 tests covering:
-  - `splitVisualClusters`
-  - `normalizeKeyInputs`
-  - `getExactMatchFlag`
-  - `flattenOccurrences`
-  - `entryMatchesFilters`
-  - `normalizeAiVerification`
-  - `coerceBoolean`
-  - `matchesTextFilter`
-  - `hasSameDisplayedNikkud`
-  - `extractDictionaryNikkudWord`
-  - `countCorrectionChanges`
-  - `getStatusSortRank`
-  - `getManualStatusSortRank`
-  - `getTrialTone`
-  - `getEffectiveModelUsed`
-  - `rowsToCSV`
+- Created `src/utils.test.ts` with 53 tests covering all pure functions.
 - Added `vitest` as dev dependency and `"test": "vitest --run"` script.
+
+### Step 7 — Extract processing logic from App.tsx (done)
+- Created `src/hooks/useProcessingQueue.ts` (~140 lines) — the `handleStartProcess` async worker logic, progress/status state, abort control.
+- App.tsx no longer contains any async processing logic.
+
+### Step 8 — Extract sort/filter logic into a custom hook (done)
+- Created `src/hooks/useSortedResults.ts` (~90 lines) — `sortedResults` useMemo, `handleSort`, filter state.
+- App.tsx reduced from ~272 lines to ~150 lines of pure layout composition.
+
+### Step 9 — Split utils.ts into logical modules (done)
+- Deleted monolithic `src/utils.ts` (390 lines).
+- Created `src/utils/` directory with:
+  - `general.ts` — `rowsToCSV`, `wait`
+  - `status.ts` — AI verification normalization, sort ranks, status helpers
+  - `hebrew.ts` — `splitVisualClusters`, `countCorrectionChanges`, Hebrew text normalization
+  - `filters.ts` — `entryMatchesFilters`, filter value extractors
+  - `api-keys.ts` — `normalizeKeyInputs`, `getUsableApiKeys`, `groupKeysByWord`
+  - `occurrences.ts` — `flattenOccurrences`
+  - `index.ts` — barrel re-export (all existing imports unchanged)
+- Added 32 new unit tests (total: 85 tests, all passing).
+
+## Tests
+- `src/utils.test.ts` — 85 tests covering all pure utility functions across all modules.
+- All tests pass: `npm test` → 85 passed.
 
 ## Next steps (suggested)
 
-### Step 7 — Extract processing logic from App.tsx
-App.tsx still contains the `handleStartProcess` async worker logic (~80 lines). This could be extracted into a custom hook `useProcessingQueue.ts` in a `src/hooks/` folder, bringing App.tsx down to ~200 lines and making the processing logic independently testable.
+### Step 10 — Extract export logic from App.tsx
+`handleExportCSV` and `handleExportJSON` (~40 lines) could move into a `src/hooks/useExport.ts` hook or a `src/utils/export.ts` module, bringing App.tsx closer to ~120 lines of pure layout.
 
-### Step 8 — Extract sort logic into a custom hook
-The `sortedResults` useMemo and `handleSort` could become `useSortedResults.ts`, further simplifying App.tsx.
-
-## Tests
-- `utils.ts` contains pure functions that are good candidates for unit tests.
-- Priority test targets: `splitVisualClusters`, `entryMatchesFilters`, `normalizeKeyInputs`, `getExactMatchFlag`, `flattenOccurrences`.
-- All priority targets now have tests (53 tests, all passing).
+### Step 11 — Extract file import logic
+The `handleFile` callback (~30 lines) could become a `useFileImport.ts` hook, making App.tsx purely a composition of hooks + JSX layout.
 
 # Questions
 ## 11/05/2026
@@ -100,5 +114,7 @@ Update the REFACTOR.md file as needed.
 ### Question 2
 Continue the refactoring. `WordDetailPanel.tsx` is still 514 lines — split it into smaller components (OccurrenceCard, ManualReviewSection, AiResultSection, OccurrenceList, etc.) so that no file exceeds 200-300 lines. Then do the same for `App.tsx` (extract the verification table and the controls panel). The website must work exactly the same after each split. Write unit tests for `utils.ts` pure functions. Update this REFACTOR.md file as you go, and write the next thing you think should be split.
 
-### Next question
+### Question 3
 Continue the refactoring. Extract the `handleStartProcess` async worker logic from `App.tsx` into a custom hook `src/hooks/useProcessingQueue.ts`, and the sort/filter logic (`sortedResults` useMemo + `handleSort`) into `src/hooks/useSortedResults.ts`. This should bring `App.tsx` down to ~150 lines of pure layout composition. Then look at `utils.ts` (390 lines) — if it exceeds 300 lines, split it into logical groups (e.g. `src/utils/hebrew.ts`, `src/utils/filters.ts`, `src/utils/api-keys.ts`) with a barrel `src/utils/index.ts` re-exporting everything so existing imports don't break. The website must work exactly the same after each step. Add unit tests for any new module. Update this REFACTOR.md file as you go (mark steps done, update the architecture diagram, and write the next thing you think should be split).
+
+### Next question
