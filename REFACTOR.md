@@ -135,3 +135,36 @@ All 12 steps have been completed. The codebase is now well-structured with:
 - App.tsx is 152 lines of pure layout composition
 - All business logic extracted into dedicated hooks and utility modules
 - The `lib/groq/` module cleanly separated into errors, prompt, request, parse, and orchestration
+
+# Questions
+## 11/05/2026
+### Question 1
+I see that the code is one file of about 2000 lines of code. It is a little too much. I don't think any component should be more than 200-300 lines of code. So find one thing (for the moment) that you can put in a different component, and split it. I think that you can also make types files and contants files. Pay attention that the website should work exactly the same. If this is a utils file that you do, write tests files as needed. Pay attention to have a good architecture of the project, and well structured in the files. The write me the next thing you think you can split to a component.
+Update the REFACTOR.md file as needed.
+
+### Question 2
+Continue the refactoring. `WordDetailPanel.tsx` is still 514 lines — split it into smaller components (OccurrenceCard, ManualReviewSection, AiResultSection, OccurrenceList, etc.) so that no file exceeds 200-300 lines. Then do the same for `App.tsx` (extract the verification table and the controls panel). The website must work exactly the same after each split. Write unit tests for `utils.ts` pure functions. Update this REFACTOR.md file as you go, and write the next thing you think should be split.
+
+### Question 3
+Continue the refactoring. Extract the `handleStartProcess` async worker logic from `App.tsx` into a custom hook `src/hooks/useProcessingQueue.ts`, and the sort/filter logic (`sortedResults` useMemo + `handleSort`) into `src/hooks/useSortedResults.ts`. This should bring `App.tsx` down to ~150 lines of pure layout composition. Then look at `utils.ts` (390 lines) — if it exceeds 300 lines, split it into logical groups (e.g. `src/utils/hebrew.ts`, `src/utils/filters.ts`, `src/utils/api-keys.ts`) with a barrel `src/utils/index.ts` re-exporting everything so existing imports don't break. The website must work exactly the same after each step. Add unit tests for any new module. Update this REFACTOR.md file as you go (mark steps done, update the architecture diagram, and write the next thing you think should be split).
+
+### Question 4
+Finish the refactoring. The website must work exactly the same after each step. Add unit tests for any new module. Update this REFACTOR.md file as you go (mark steps done, update the architecture diagram, and write the next thing you think should be split). Do steps 10, 11, and 12 below:
+
+**Step 10** — Extract export/import logic from `App.tsx`: move `handleExportCSV` and `handleExportJSON` into `src/hooks/useExport.ts`, and `handleFile` into `src/hooks/useFileImport.ts`. App.tsx should become ~100 lines of pure layout composition with zero business logic.
+
+**Step 11** — Split `src/lib/groq.ts` (637 lines) into smaller modules under `src/lib/`:
+
+- `src/lib/groq/errors.ts` — all custom error classes (`GroqRequestError`, `GroqRateLimitError`, `GroqInvalidJsonError`, `GroqAllKeysFailedError`) and error helpers (`isRateLimitError`, `extractVerificationErrorDetails`, `createFailureDetails`).
+
+- `src/lib/groq/prompt.ts` — `generatePrompt`, `generateFallbackPrompt`.
+
+- `src/lib/groq/request.ts` — `requestVerification`, `parseApiErrorMessage`, `parseRetryAfterMs`, `isRecoverableStatus`, `isPrimaryJsonValidationFailure`.
+
+- `src/lib/groq/parse.ts` — `parseVerificationResponse`, `normalizeSurfaceWithoutNikkud`, `hasSameSurfaceWithoutNikkud`, `buildNotes`.
+
+- `src/lib/groq/index.ts` — barrel that re-exports `verifyWithGroq`, `isRateLimitError`, `extractVerificationErrorDetails` (keeps existing imports unchanged), plus the main `verifyWithGroq` and `tryModel` orchestration logic.
+
+- No file should exceed 200 lines.
+
+**Step 12** — Final cleanup: verify that no file in `src/` exceeds 300 lines (`VerificationTable.tsx` at 230 is fine). Run `npm run lint`, `npm test`, and `npm run build` to confirm everything works. Update this REFACTOR.md with the final architecture diagram and mark the refactoring as complete.
