@@ -34,7 +34,18 @@ export type FilterKey =
   | "exact"
   | "correction";
 
-export type Filters = Record<FilterKey, string>;
+export type TriState = "include" | "exclude" | null;
+
+/** Text filters remain strings; option-based filters use tri-state maps */
+export interface Filters {
+  word: string;
+  dictionary: string;
+  meaning: string;
+  status: Record<string, TriState>;
+  manual: Record<string, TriState>;
+  exact: Record<string, TriState>;
+  correction: Record<string, TriState>;
+}
 
 export type ManualStatus = WordEntry["manual_status"];
 
@@ -44,14 +55,13 @@ export const EMPTY_FILTERS: Filters = {
   word: "",
   dictionary: "",
   meaning: "",
-  status: "",
-  manual: "",
-  exact: "",
-  correction: "",
+  status: {},
+  manual: {},
+  exact: {},
+  correction: {},
 };
 
 export const STATUS_FILTER_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "", label: "Tous" },
   { value: "correct", label: "Correct" },
   { value: "incorrect", label: "À corriger" },
   { value: "processing", label: "En cours" },
@@ -60,14 +70,12 @@ export const STATUS_FILTER_OPTIONS: Array<{ value: string; label: string }> = [
 ];
 
 export const EXACT_FILTER_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "", label: "Tous" },
   { value: "true", label: "Oui" },
   { value: "false", label: "Non" },
   { value: "none", label: "—" },
 ];
 
 export const MANUAL_FILTER_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "", label: "Tous" },
   { value: "good", label: "Good" },
   { value: "to_fix", label: "To fix" },
   { value: "need_more_sources", label: "Need more sources" },
@@ -77,7 +85,6 @@ export const MANUAL_FILTER_OPTIONS: Array<{ value: string; label: string }> = [
 ];
 
 export const CORRECTION_FILTER_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "", label: "Tous" },
   { value: "none", label: "Pas de correction" },
   { value: "0", label: "0 changement" },
   { value: "1", label: "1 changement" },

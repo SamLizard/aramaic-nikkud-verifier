@@ -255,26 +255,26 @@ describe("entryMatchesFilters", () => {
 
   it("filters by status", () => {
     const entry = makeEntry({ _status: "done", ai_verification: { ...EMPTY_AI_VERIFICATION, nikkud_correct: true } });
-    expect(entryMatchesFilters(entry, { ...EMPTY_FILTERS, status: "correct" })).toBe(true);
-    expect(entryMatchesFilters(entry, { ...EMPTY_FILTERS, status: "incorrect" })).toBe(false);
+    expect(entryMatchesFilters(entry, { ...EMPTY_FILTERS, status: { correct: "include" } })).toBe(true);
+    expect(entryMatchesFilters(entry, { ...EMPTY_FILTERS, status: { incorrect: "include" } })).toBe(false);
   });
 
   it("filters by manual status", () => {
     const entry = makeEntry({ manual_status: "good" });
-    expect(entryMatchesFilters(entry, { ...EMPTY_FILTERS, manual: "good" })).toBe(true);
-    expect(entryMatchesFilters(entry, { ...EMPTY_FILTERS, manual: "to_fix" })).toBe(false);
+    expect(entryMatchesFilters(entry, { ...EMPTY_FILTERS, manual: { good: "include" } })).toBe(true);
+    expect(entryMatchesFilters(entry, { ...EMPTY_FILTERS, manual: { to_fix: "include" } })).toBe(false);
   });
 
   it("filters unset manual status", () => {
     const entry = makeEntry({ manual_status: null });
-    expect(entryMatchesFilters(entry, { ...EMPTY_FILTERS, manual: "unset" })).toBe(true);
+    expect(entryMatchesFilters(entry, { ...EMPTY_FILTERS, manual: { unset: "include" } })).toBe(true);
   });
 
   it("filters by rerun flag", () => {
     const entry = makeEntry({
       ai_verification: { ...EMPTY_AI_VERIFICATION, needs_ai_rerun: true },
     });
-    expect(entryMatchesFilters(entry, { ...EMPTY_FILTERS, manual: "rerun" })).toBe(true);
+    expect(entryMatchesFilters(entry, { ...EMPTY_FILTERS, manual: { rerun: "include" } })).toBe(true);
   });
 });
 

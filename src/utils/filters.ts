@@ -1,5 +1,5 @@
 import type { WordEntry } from "../types";
-import type { Filters, ManualStatus } from "../constants";
+import type { Filters, TriState, ManualStatus } from "../constants";
 import { MANUAL_STATUS_OPTIONS } from "../constants";
 import { getExactMatchFlag } from "./status";
 import { countCorrectionChanges } from "./hebrew";
@@ -38,6 +38,33 @@ export const matchesTextFilter = (haystack: string, needle: string): boolean => 
 export const getManualStatusOption = (status?: ManualStatus | null) =>
   MANUAL_STATUS_OPTIONS.find((option) => option.value === status) || null;
 
+// ─── Tri-state filter matching ───────────────────────────────────────────────
+
+/**
+ * Checks if a value passes a tri-state filter map.
+ * - If no selections are active (all null), everything passes.
+ * - If any "include" selections exist, value must match one of them.
+ * - If any "exclude" selections exist, value must NOT match any of them.
+ * - Include and exclude can coexist.
+ */
+const matchesTriStateFilter = (
+  value: string,
+  selections: Record<string, TriState>
+): boolean => {
+  const includes: string[] = [];
+  const excludes: string[] = [];
+
+  for (const [key, state] of Object.entries(selections)) {
+    if (state === "include") includes.push(key);
+    else if (state === "exclude") excludes.push(key);
+  }
+
+  if (includes.length === 0 && excludes.length === 0) return true;
+  if (excludes.includes(value)) return false;
+  if (includes.length > 0 && !includes.includes(value)) return false;
+  return true;
+};
+
 // ─── Main filter function ────────────────────────────────────────────────────
 
 export const entryMatchesFilters = (
@@ -53,26 +80,23 @@ export const entryMatchesFilters = (
   if (!matchesTextFilter(entry.french_meaning || "", filters.meaning)) {
     return false;
   }
-  if (
-    filters.correction &&
-    getCorrectionFilterValue(entry) !== filters.correction
-  ) {
+  if (!matchesTriStateFilter(getCorrectionFilterValue(entry), filters.correction)) {
     return false;
   }
-  if (filters.status && getStatusFilterValue(entry) !== filters.status) {
+  if (!matchesTriStateFilter(getStatusFilterValue(entry), filters.status)) {
     return false;
   }
-  if (filters.exact && getExactFilterValue(entry) !== filters.exact) {
+  if (!matchesTriStateFilter(getExactFilterValue(entry), filters.exact)) {
     return false;
   }
-  if (filters.manual) {
-    if (filters.manual === "unset") {
-      if (entry.manual_status) return false;
-    } else if (filters.manual === "rerun") {
-      if (!entry.ai_verification.needs_ai_rerun) return false;
-    } else if (entry.manual_status !== filters.manual) {
-      return false;
-    }
+
+  // Manual filter: derive the value
+  const manualValue = entry.ai_verification.needs_ai_rerun
+    ? "rerun"
+    : entry.manual_status || "unset";
+  if (!matchesTriStateFilter(manualValue, filters.manual)) {
+    return false;
   }
+
   return true;
 };

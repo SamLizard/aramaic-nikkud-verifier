@@ -3,6 +3,7 @@ import { Info, CheckCircle2, XCircle, BookOpen } from "lucide-react";
 import type { WordEntry } from "../types";
 import { getExactMatchFlag, getEffectiveModelUsed } from "../utils";
 import { renderComparedWord } from "./renderers";
+import { highlightWordInText } from "./highlightWord";
 
 interface AiResultSectionProps {
   word: WordEntry;
@@ -98,7 +99,7 @@ const AiResultSection: React.FC<AiResultSectionProps> = ({ word }) => {
             <Info className="w-3 h-3" /> Analyse Grammaticale
           </h4>
           <p className="text-base leading-relaxed text-[#2D1B0E]">
-            {word.ai_verification.notes}
+            {highlightWordInText(word.ai_verification.notes, word)}
           </p>
         </div>
       )}

@@ -37,8 +37,15 @@ No. The panel is still overload. I don't want an overload. I want it to take pla
 ### Question 5
 Thanks, but it still shrinks the table a little bit (1 column is hidden). Could you put the left things at the bottom of the table (when needed), so we have more place
 
-### Next question
+### Question 6
 I would like the word in the explanation to also be highlighted.
 I would like (if possible) the filter of a column to be display only when clicking some icon displayed in the column header. And it should be displayed like in a tooltip or something like this. 
 I would like to be able (when selecting options in a filter) to selected multiple of them, or when I click the second time to select NOT this option, and the third time to stop filtering by this thing.
 I would like the things that were at left (and where moved to bottom) to be at left until we open the panel, and just then, put them at bottom. I think that we can also reduce a little bit the height used in all the website, so it is not too much at bottom.
+If they are things that I didn't tell you exactly how to implement, think UX.
+Pay attention to standards. Don't write more than 200-300 lines of code in the same file if you can split.
+
+### Next question
+The highlight is not working. Pay attention that the explanation text is without nikkud. I just want to have it highlighted so I know it is here (then I can read the explanation before/after). The explanation part I am talking about is the one displayed in each source, after the nikkud part.
+The filter (of the column with nikkud word - two first columns) should also work if I write without nikkud.
+Remove the margin between the table and the components displayed below it (when panel is open).
