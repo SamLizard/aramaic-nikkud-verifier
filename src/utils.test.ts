@@ -9,6 +9,8 @@ import {
   normalizeTrials,
   getImportedStatus,
   getImportedNeedsAiRerun,
+  normalizeImportedEntry,
+  prepareWordEntryForExport,
   isEntryAlreadyAnalyzed,
   getUsableApiKeys,
   groupKeysByWord,
@@ -577,11 +579,62 @@ describe("getImportedNeedsAiRerun", () => {
     expect(getImportedNeedsAiRerun(entry)).toBe(true);
   });
 
+  it("falls back to a legacy top-level flag when the nested flag is absent", () => {
+    const entry = makeEntry();
+    delete entry.ai_verification.needs_ai_rerun;
+    (entry as WordEntry & { needs_ai_rerun?: boolean }).needs_ai_rerun = true;
+    expect(getImportedNeedsAiRerun(entry)).toBe(true);
+  });
+
+  it("gives the canonical nested flag priority over a stale top-level flag", () => {
+    const entry = makeEntry({
+      ai_verification: { ...EMPTY_AI_VERIFICATION, needs_ai_rerun: false },
+    }) as WordEntry & { needs_ai_rerun?: boolean };
+    entry.needs_ai_rerun = true;
+    expect(getImportedNeedsAiRerun(entry)).toBe(false);
+  });
+
   it("coerces string 'true' to true", () => {
     const entry = makeEntry({
       ai_verification: { ...EMPTY_AI_VERIFICATION, needs_ai_rerun: "true" as any },
     });
     expect(getImportedNeedsAiRerun(entry)).toBe(true);
+  });
+});
+
+// ─── rerun flag migration and export ────────────────────────────────────────
+
+describe("rerun flag migration and export", () => {
+  it("moves a legacy flag into ai_verification and removes the old field", () => {
+    const entry = makeEntry() as WordEntry & { needs_ai_rerun?: boolean };
+    delete entry.ai_verification.needs_ai_rerun;
+    entry.needs_ai_rerun = true;
+
+    const normalized = normalizeImportedEntry(entry);
+
+    expect(normalized.ai_verification.needs_ai_rerun).toBe(true);
+    expect(normalized).not.toHaveProperty("needs_ai_rerun");
+  });
+
+  it("does not resurrect a completed rerun during export and reimport", () => {
+    const conflictingEntry = makeEntry({
+      ai_verification: {
+        ...EMPTY_AI_VERIFICATION,
+        nikkud_correct: true,
+        needs_ai_rerun: false,
+      },
+      _status: "done",
+    }) as WordEntry & { needs_ai_rerun?: boolean };
+    conflictingEntry.needs_ai_rerun = true;
+
+    const imported = normalizeImportedEntry(conflictingEntry);
+    const exported = prepareWordEntryForExport(imported);
+    const reimported = normalizeImportedEntry(exported as WordEntry);
+
+    expect(imported.ai_verification.needs_ai_rerun).toBe(false);
+    expect(exported).not.toHaveProperty("needs_ai_rerun");
+    expect(exported).not.toHaveProperty("_status");
+    expect(reimported.ai_verification.needs_ai_rerun).toBe(false);
   });
 });
 

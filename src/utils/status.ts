@@ -22,11 +22,47 @@ export const normalizeAiVerification = (
 export const coerceBoolean = (value: unknown): boolean =>
   value === true || value === "true" || value === 1 || value === "1";
 
-export const getImportedNeedsAiRerun = (entry: WordEntry): boolean =>
-  coerceBoolean(entry.ai_verification?.needs_ai_rerun) ||
-  coerceBoolean(
-    (entry as WordEntry & { needs_ai_rerun?: unknown }).needs_ai_rerun
-  );
+type LegacyWordEntry = WordEntry & { needs_ai_rerun?: unknown };
+
+export const getImportedNeedsAiRerun = (entry: WordEntry): boolean => {
+  const nestedValue = entry.ai_verification?.needs_ai_rerun as unknown;
+  if (nestedValue !== undefined && nestedValue !== null) {
+    return coerceBoolean(nestedValue);
+  }
+
+  return coerceBoolean((entry as LegacyWordEntry).needs_ai_rerun);
+};
+
+export const normalizeImportedEntry = (entry: WordEntry): WordEntry => {
+  const needsAiRerun = getImportedNeedsAiRerun(entry);
+  const normalizedEntry = { ...entry } as LegacyWordEntry;
+  delete normalizedEntry.needs_ai_rerun;
+
+  const aiVerification = {
+    ...normalizeAiVerification(entry.ai_verification),
+    needs_ai_rerun: needsAiRerun,
+  };
+
+  return {
+    ...normalizedEntry,
+    ai_verification: aiVerification,
+    manual_status: entry.manual_status || null,
+    manual_note: entry.manual_note || "",
+    _status: getImportedStatus({
+      ...normalizedEntry,
+      ai_verification: aiVerification,
+    }),
+  };
+};
+
+export const prepareWordEntryForExport = (
+  entry: WordEntry
+): Omit<WordEntry, "_status"> => {
+  const exportedEntry = { ...entry } as LegacyWordEntry;
+  delete exportedEntry._status;
+  delete exportedEntry.needs_ai_rerun;
+  return exportedEntry;
+};
 
 export const getImportedStatus = (entry: WordEntry): WordEntry["_status"] => {
   const verification = normalizeAiVerification(entry.ai_verification);

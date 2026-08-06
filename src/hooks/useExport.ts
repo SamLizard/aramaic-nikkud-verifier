@@ -1,7 +1,11 @@
 import { useCallback } from "react";
-import type { WordEntry } from "../types";
 import type { SortedRow } from "./useSortedResults";
-import { rowsToCSV, getExactMatchFlag, getEffectiveModelUsed } from "../utils";
+import {
+  rowsToCSV,
+  getExactMatchFlag,
+  getEffectiveModelUsed,
+  prepareWordEntryForExport,
+} from "../utils";
 
 export const useExport = (sortedResults: SortedRow[]) => {
   const handleExportCSV = useCallback(() => {
@@ -43,7 +47,7 @@ export const useExport = (sortedResults: SortedRow[]) => {
   const handleExportJSON = useCallback(() => {
     const visibleEntries = sortedResults.map((row) => row.entry);
     const dataStr = JSON.stringify(
-      visibleEntries.map(({ _status, ...rest }: WordEntry) => rest),
+      visibleEntries.map(prepareWordEntryForExport),
       null,
       2
     );

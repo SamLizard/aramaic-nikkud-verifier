@@ -513,7 +513,8 @@ def fix_multi_words(entries: list[dict]) -> list[dict]:
 
         # Replace ONLY gemara_pages — leave everything else untouched
         entry["gemara_pages"] = new_pages
-        entry["needs_ai_rerun"] = True
+        entry.setdefault("ai_verification", {})["needs_ai_rerun"] = True
+        entry.pop("needs_ai_rerun", None)
 
     return entries
 
@@ -572,7 +573,8 @@ def more_sources(entries: list[dict], max_extra: int = 10) -> list[dict]:
 
         print(f"  → Added {added} page(s)")
         if added > 0:
-            entry["needs_ai_rerun"] = True
+            entry.setdefault("ai_verification", {})["needs_ai_rerun"] = True
+            entry.pop("needs_ai_rerun", None)
 
     return entries
 

@@ -171,7 +171,7 @@ After a successful rerun, the app sets:
 "needs_ai_rerun": false
 ```
 
-The app also tolerates legacy imported files where `needs_ai_rerun` may be present outside `ai_verification`.
+The app also tolerates legacy imported files where `needs_ai_rerun` may be present outside `ai_verification`. The legacy field is used only when the nested field is absent, then removed during import and export so that an old value cannot reactivate a completed rerun.
 
 ## Review workflow
 

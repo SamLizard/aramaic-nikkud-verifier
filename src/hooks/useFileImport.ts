@@ -1,11 +1,7 @@
 import React, { useCallback } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { WordEntry } from "../types";
-import {
-  normalizeAiVerification,
-  getImportedNeedsAiRerun,
-  getImportedStatus,
-} from "../utils";
+import { normalizeImportedEntry } from "../utils";
 
 interface UseFileImportOptions {
   setResults: Dispatch<SetStateAction<WordEntry[]>>;
@@ -27,24 +23,7 @@ export const useFileImport = ({
         try {
           const raw = JSON.parse(ev.target?.result as string);
           const list: WordEntry[] = Array.isArray(raw) ? raw : [raw];
-          setResults(
-            list.map((entry) => {
-              const aiVerification = {
-                ...normalizeAiVerification(entry.ai_verification),
-                needs_ai_rerun: getImportedNeedsAiRerun(entry),
-              };
-              return {
-                ...entry,
-                ai_verification: aiVerification,
-                manual_status: entry.manual_status || null,
-                manual_note: entry.manual_note || "",
-                _status: getImportedStatus({
-                  ...entry,
-                  ai_verification: aiVerification,
-                }),
-              };
-            })
-          );
+          setResults(list.map(normalizeImportedEntry));
           setStatusMsg(
             `${list.length} mot${list.length > 1 ? "s" : ""} chargé${list.length > 1 ? "s" : ""}.`
           );

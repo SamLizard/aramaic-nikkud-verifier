@@ -7,6 +7,8 @@ export {
   normalizeAiVerification,
   coerceBoolean,
   getImportedNeedsAiRerun,
+  normalizeImportedEntry,
+  prepareWordEntryForExport,
   getImportedStatus,
   isEntryAlreadyAnalyzed,
   getExactMatchFlag,
