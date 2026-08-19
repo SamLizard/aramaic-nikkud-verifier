@@ -15,6 +15,8 @@ export const useExport = (sortedResults: SortedRow[]) => {
       const exactMatch = getExactMatchFlag(entry);
       return {
         "Mot (Nikkud)": entry.word_with_nikkud,
+        "Mot d'origine": entry.manual_word_edit?.original_word_with_nikkud || "",
+        "Edite a la main": entry.manual_word_edit ? "true" : "",
         Dictionnaire: entry.dictionary?.meaning || "",
         "Sens (Attendu)": entry.french_meaning,
         "Correct?":

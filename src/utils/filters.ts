@@ -3,6 +3,7 @@ import type { Filters, TriState, ManualStatus } from "../constants";
 import { MANUAL_STATUS_OPTIONS } from "../constants";
 import { getExactMatchFlag } from "./status";
 import { countCorrectionChanges } from "./hebrew";
+import { getOriginalWord, hasManualWordEdit } from "./manual-word-edit";
 
 // ─── Nikkud stripping for filter matching ────────────────────────────────────
 
@@ -26,6 +27,11 @@ export const getExactFilterValue = (entry: WordEntry): string => {
   const flag = getExactMatchFlag(entry);
   if (flag === null) return "none";
   return flag ? "true" : "false";
+};
+
+export const getEditedFilterValue = (entry: WordEntry): string => {
+  if (!hasManualWordEdit(entry)) return "untouched";
+  return entry.manual_word_edit?.ai_verdict_outdated ? "outdated" : "edited";
 };
 
 export const getCorrectionFilterValue = (entry: WordEntry): string => {
@@ -81,7 +87,12 @@ export const entryMatchesFilters = (
   entry: WordEntry,
   filters: Filters
 ): boolean => {
-  if (!matchesTextFilter(entry.word_with_nikkud || "", filters.word)) {
+  // Search the current form *and* the archived original, so a row stays
+  // findable by the wording it had before a manual correction.
+  const wordMatches =
+    matchesTextFilter(entry.word_with_nikkud || "", filters.word) ||
+    matchesTextFilter(getOriginalWord(entry), filters.word);
+  if (!wordMatches) {
     return false;
   }
   if (!matchesTextFilter(entry.dictionary?.meaning || "", filters.dictionary)) {
@@ -105,6 +116,10 @@ export const entryMatchesFilters = (
     ? "rerun"
     : entry.manual_status || "unset";
   if (!matchesTriStateFilter(manualValue, filters.manual)) {
+    return false;
+  }
+
+  if (!matchesTriStateFilter(getEditedFilterValue(entry), filters.edited)) {
     return false;
   }
 

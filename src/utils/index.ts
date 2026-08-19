@@ -28,6 +28,7 @@ export {
   getStatusFilterValue,
   getExactFilterValue,
   getCorrectionFilterValue,
+  getEditedFilterValue,
   matchesTextFilter,
   getManualStatusOption,
   entryMatchesFilters,
@@ -42,3 +43,15 @@ export {
 } from "./hebrew";
 
 export { flattenOccurrences } from "./occurrences";
+
+export {
+  hasManualWordEdit,
+  getOriginalWord,
+  normalizeManualWordEdit,
+  applyManualWordEdit,
+  revertManualWordEdit,
+  acknowledgeManualWordEdit,
+  getManualWordEditSortRank,
+  isAiVerdictOutdated,
+  getAiVerdictWord,
+} from "./manual-word-edit";

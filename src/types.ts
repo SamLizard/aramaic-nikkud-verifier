@@ -68,6 +68,22 @@ export interface AIVerificationTrial {
   raw_response: string;
 }
 
+/**
+ * Trace of a manual correction of the word itself.
+ *
+ * `WordEntry.word_with_nikkud` always holds the *current* (corrected) form so
+ * that prompts, diffs and exports stay consistent. The pre-edit form is kept
+ * here so nothing is ever lost and the edit can be reverted.
+ */
+export interface ManualWordEdit {
+  original_word_with_nikkud: string;
+  original_base_consonants: string;
+  /** ISO timestamp of the last manual edit. */
+  edited_at: string;
+  /** True when the stored AI verdict was produced before this edit. */
+  ai_verdict_outdated: boolean;
+}
+
 export interface WordEntry {
   word_with_nikkud: string;
   base_consonants: string;
@@ -78,6 +94,7 @@ export interface WordEntry {
   ai_verification: AIVerification;
   manual_status?: "good" | "to_fix" | "need_more_sources" | "to_ask" | null;
   manual_note?: string;
+  manual_word_edit?: ManualWordEdit | null;
   // Local UI status
   _status?: "pending" | "processing" | "done" | "error";
 }

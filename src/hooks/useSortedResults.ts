@@ -5,6 +5,7 @@ import { EMPTY_FILTERS } from "../constants";
 import {
   getStatusSortRank,
   getManualStatusSortRank,
+  getManualWordEditSortRank,
   getExactMatchFlag,
   entryMatchesFilters,
 } from "../utils";
@@ -60,6 +61,10 @@ export const useSortedResults = (results: WordEntry[]) => {
         case "manual":
           leftValue = getManualStatusSortRank(left.entry.manual_status);
           rightValue = getManualStatusSortRank(right.entry.manual_status);
+          break;
+        case "edited":
+          leftValue = getManualWordEditSortRank(left.entry);
+          rightValue = getManualWordEditSortRank(right.entry);
           break;
         case "exact":
           leftValue = getExactMatchFlag(left.entry);

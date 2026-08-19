@@ -1,7 +1,12 @@
 import React from "react";
-import { Info, CheckCircle2, XCircle, BookOpen } from "lucide-react";
+import { Info, CheckCircle2, XCircle, BookOpen, AlertTriangle } from "lucide-react";
 import type { WordEntry } from "../types";
-import { getExactMatchFlag, getEffectiveModelUsed } from "../utils";
+import {
+  getExactMatchFlag,
+  getEffectiveModelUsed,
+  getAiVerdictWord,
+  isAiVerdictOutdated,
+} from "../utils";
 import { renderComparedWord } from "./renderers";
 import { highlightWordInText } from "./highlightWord";
 
@@ -12,9 +17,27 @@ interface AiResultSectionProps {
 const AiResultSection: React.FC<AiResultSectionProps> = ({ word }) => {
   const exactMatch = getExactMatchFlag(word);
   const modelUsed = getEffectiveModelUsed(word.ai_verification);
+  // The verdict describes the pre-edit form until the entry is rerun, so show
+  // that form here rather than the current one.
+  const verdictWord = getAiVerdictWord(word);
+  const verdictIsOutdated = isAiVerdictOutdated(word);
 
   return (
     <div className="p-4 space-y-3">
+      {verdictIsOutdated ? (
+        <div className="flex items-start gap-2 p-2.5 rounded-lg border border-amber-200 bg-amber-50 text-[11px] text-amber-900 leading-relaxed">
+          <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+          <p>
+            Analyse effectuée sur le mot d'origine (affiché ci-dessous). Votre
+            mot corrigé{" "}
+            <span className="font-serif text-sm font-bold" dir="rtl">
+              {word.word_with_nikkud}
+            </span>{" "}
+            n'a pas encore été analysé.
+          </p>
+        </div>
+      ) : null}
+
       <div className="flex items-center justify-between gap-3 text-[10px] uppercase font-bold text-[#8B5E3C]">
         <span>Modèle utilisé : {modelUsed || "—"}</span>
         <div className="flex items-center gap-3">
@@ -46,16 +69,21 @@ const AiResultSection: React.FC<AiResultSectionProps> = ({ word }) => {
             <span className="text-[8px] font-black uppercase tracking-widest opacity-50">
               {word.ai_verification.nikkud_correct ? "Correct" : "À corriger"}
             </span>
+            {verdictIsOutdated ? (
+              <span className="text-[8px] font-black uppercase tracking-widest text-amber-700">
+                · mot d'origine
+              </span>
+            ) : null}
           </div>
           <div className="font-serif text-xl text-right leading-loose" dir="rtl">
             {!word.ai_verification.nikkud_correct &&
             word.ai_verification.corrected_nikkud_word
               ? renderComparedWord(
-                  word.word_with_nikkud,
+                  verdictWord,
                   word.ai_verification.corrected_nikkud_word,
                   "original"
                 )
-              : word.word_with_nikkud}
+              : verdictWord}
           </div>
         </div>
 
@@ -78,7 +106,7 @@ const AiResultSection: React.FC<AiResultSectionProps> = ({ word }) => {
               <div className="font-serif text-xl text-right font-bold text-green-800 leading-loose" dir="rtl">
                 {renderComparedWord(
                   word.ai_verification.corrected_nikkud_word,
-                  word.word_with_nikkud,
+                  verdictWord,
                   "corrected"
                 )}
               </div>

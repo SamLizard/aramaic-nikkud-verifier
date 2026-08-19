@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Loader2, Search, BookOpen, X } from "lucide-react";
 import { generatePrompt } from "../lib/groq";
 import type { WordEntry } from "../types";
+import WordEditSection from "./WordEditSection";
 import ManualReviewSection from "./ManualReviewSection";
 import AiResultSection from "./AiResultSection";
 import TrialHistorySection from "./TrialHistorySection";
@@ -34,9 +35,20 @@ const WordDetailPanel: React.FC<WordDetailPanelProps> = ({ word, onUpdate, onClo
           <p className="text-sm opacity-55 italic max-w-[45%] leading-relaxed">
             « {word.french_meaning} »
           </p>
-          <h3 className="font-serif text-2xl font-bold text-right" dir="rtl">
-            {word.word_with_nikkud}
-          </h3>
+          <div className="text-right">
+            <h3 className="font-serif text-2xl font-bold" dir="rtl">
+              {word.word_with_nikkud}
+            </h3>
+            {word.manual_word_edit ? (
+              <p
+                className="font-serif text-sm opacity-40 line-through mt-0.5"
+                dir="rtl"
+                title="Mot d'origine avant correction manuelle"
+              >
+                {word.manual_word_edit.original_word_with_nikkud}
+              </p>
+            ) : null}
+          </div>
         </div>
         <div className="flex gap-2">
           {word.dictionary.dict_url && (
@@ -82,6 +94,8 @@ const WordDetailPanel: React.FC<WordDetailPanelProps> = ({ word, onUpdate, onClo
             </div>
           </div>
         </div>
+
+        <WordEditSection word={word} onUpdate={onUpdate} />
 
         <ManualReviewSection word={word} onUpdate={onUpdate} />
 

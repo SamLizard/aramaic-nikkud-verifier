@@ -7,6 +7,7 @@ import {
   STATUS_FILTER_OPTIONS,
   EXACT_FILTER_OPTIONS,
   MANUAL_FILTER_OPTIONS,
+  EDITED_FILTER_OPTIONS,
   CORRECTION_FILTER_OPTIONS,
 } from "../constants";
 import ColumnFilterPopover from "./ColumnFilterPopover";
@@ -42,6 +43,7 @@ const VerificationTable: React.FC<VerificationTableProps> = ({
     filters.meaning !== "" ||
     Object.values(filters.status).some((v) => v !== null) ||
     Object.values(filters.manual).some((v) => v !== null) ||
+    Object.values(filters.edited).some((v) => v !== null) ||
     Object.values(filters.exact).some((v) => v !== null) ||
     Object.values(filters.correction).some((v) => v !== null);
 
@@ -154,6 +156,20 @@ const VerificationTable: React.FC<VerificationTableProps> = ({
                       options={MANUAL_FILTER_OPTIONS}
                       selections={filters.manual}
                       onChange={(s) => onFilterChange({ ...filters, manual: s as Record<string, TriState> })}
+                    />
+                  }
+                />
+                <TableHeader
+                  label="Édité"
+                  sortKey="edited"
+                  className="w-16 text-center"
+                  onSort={onSort}
+                  filterNode={
+                    <ColumnFilterPopover
+                      mode="options"
+                      options={EDITED_FILTER_OPTIONS}
+                      selections={filters.edited}
+                      onChange={(s) => onFilterChange({ ...filters, edited: s as Record<string, TriState> })}
                     />
                   }
                 />

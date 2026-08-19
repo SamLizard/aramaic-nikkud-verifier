@@ -1,5 +1,5 @@
 import React from "react";
-import { Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Pencil } from "lucide-react";
 import type { WordEntry } from "../types";
 import { getExactMatchFlag, getManualStatusOption } from "../utils";
 import { renderComparedWord } from "./renderers";
@@ -18,6 +18,7 @@ const TableRow: React.FC<TableRowProps> = ({
   onSelect,
 }) => {
   const exactMatchFlag = getExactMatchFlag(entry);
+  const manualEdit = entry.manual_word_edit || null;
   const hasCorrection =
     entry.ai_verification.nikkud_correct === false &&
     Boolean(entry.ai_verification.corrected_nikkud_word);
@@ -40,6 +41,14 @@ const TableRow: React.FC<TableRowProps> = ({
               "original"
             )
           : entry.word_with_nikkud}
+        {manualEdit ? (
+          <div
+            className="text-[11px] opacity-40 line-through leading-tight"
+            title={`Mot d'origine : ${manualEdit.original_word_with_nikkud}`}
+          >
+            {manualEdit.original_word_with_nikkud}
+          </div>
+        ) : null}
       </td>
       <td className="p-2 text-[10px] leading-relaxed opacity-65">
         <div className="line-clamp-2">{entry.dictionary?.meaning || "—"}</div>
@@ -79,6 +88,24 @@ const TableRow: React.FC<TableRowProps> = ({
             }`}
             title={entry.ai_verification.needs_ai_rerun ? "Relance IA demandee" : ""}
           />
+        )}
+      </td>
+      <td className="p-2 text-center">
+        {manualEdit ? (
+          <Pencil
+            className={`w-3.5 h-3.5 mx-auto ${
+              manualEdit.ai_verdict_outdated
+                ? "text-amber-600"
+                : "text-violet-600"
+            }`}
+            title={
+              manualEdit.ai_verdict_outdated
+                ? "Mot corrigé à la main — verdict IA à revoir"
+                : "Mot corrigé à la main — verdict IA revu"
+            }
+          />
+        ) : (
+          <span className="inline-block w-2 h-2 rounded-full bg-[#D4C3A3]" />
         )}
       </td>
       <td className="p-2 text-center">

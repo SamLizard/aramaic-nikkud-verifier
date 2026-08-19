@@ -1,6 +1,7 @@
 import type { AIVerification, AIVerificationTrial, WordEntry } from "../types";
 import { EMPTY_AI_VERIFICATION } from "../constants";
 import type { ManualStatus } from "../constants";
+import { normalizeManualWordEdit } from "./manual-word-edit";
 
 // ─── AI verification normalization ──────────────────────────────────────────
 
@@ -48,6 +49,7 @@ export const normalizeImportedEntry = (entry: WordEntry): WordEntry => {
     ai_verification: aiVerification,
     manual_status: entry.manual_status || null,
     manual_note: entry.manual_note || "",
+    manual_word_edit: normalizeManualWordEdit(entry),
     _status: getImportedStatus({
       ...normalizedEntry,
       ai_verification: aiVerification,

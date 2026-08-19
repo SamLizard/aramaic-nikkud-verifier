@@ -21,6 +21,11 @@ export const highlightWordInText = (
   if (word.ai_verification.corrected_nikkud_word) {
     targets.push(word.ai_verification.corrected_nikkud_word);
   }
+  // Notes written before a manual edit still mention the original form.
+  if (word.manual_word_edit) {
+    targets.push(word.manual_word_edit.original_word_with_nikkud);
+    targets.push(word.manual_word_edit.original_base_consonants);
+  }
   // Also add stripped versions
   targets.push(...targets.map(stripNikkud));
 

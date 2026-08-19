@@ -17,6 +17,7 @@ import {
   isEntryAlreadyAnalyzed,
   getUsableApiKeys,
   groupKeysByWord,
+  acknowledgeManualWordEdit,
 } from "../utils";
 
 interface UseProcessingQueueOptions {
@@ -102,7 +103,9 @@ export const useProcessingQueue = ({
             setResults((prev) =>
               prev.map((row, index) =>
                 index === currentIndex
-                  ? {
+                  ? // A fresh verdict is based on the current (possibly
+                    // manually edited) word, so it is no longer outdated.
+                    acknowledgeManualWordEdit({
                       ...row,
                       _status: "done",
                       ai_verification: {
@@ -110,7 +113,7 @@ export const useProcessingQueue = ({
                         ...res,
                         needs_ai_rerun: false,
                       },
-                    }
+                    })
                   : row
               )
             );

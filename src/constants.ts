@@ -20,6 +20,7 @@ export type SortKey =
   | "meaning"
   | "status"
   | "manual"
+  | "edited"
   | "exact"
   | "correction";
 
@@ -31,6 +32,7 @@ export type FilterKey =
   | "meaning"
   | "status"
   | "manual"
+  | "edited"
   | "exact"
   | "correction";
 
@@ -43,6 +45,8 @@ export interface Filters {
   meaning: string;
   status: Record<string, TriState>;
   manual: Record<string, TriState>;
+  /** Manual word-edit state — see EDITED_FILTER_OPTIONS. */
+  edited: Record<string, TriState>;
   exact: Record<string, TriState>;
   correction: Record<string, TriState>;
 }
@@ -57,6 +61,7 @@ export const EMPTY_FILTERS: Filters = {
   meaning: "",
   status: {},
   manual: {},
+  edited: {},
   exact: {},
   correction: {},
 };
@@ -82,6 +87,12 @@ export const MANUAL_FILTER_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "to_ask", label: "To ask" },
   { value: "unset", label: "Non marqué" },
   { value: "rerun", label: "Relance IA" },
+];
+
+export const EDITED_FILTER_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "outdated", label: "Corrigé — verdict IA à revoir" },
+  { value: "edited", label: "Corrigé — verdict IA revu" },
+  { value: "untouched", label: "Mot d'origine" },
 ];
 
 export const CORRECTION_FILTER_OPTIONS: Array<{ value: string; label: string }> = [
